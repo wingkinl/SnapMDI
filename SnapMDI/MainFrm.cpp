@@ -7,6 +7,7 @@
 #include "SnapMDI.h"
 
 #include "MainFrm.h"
+#include "SnapPreviewWnd.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -183,6 +184,7 @@ IMPLEMENT_DYNAMIC(CMainFrame, CMainFrameBase)
 BEGIN_MESSAGE_MAP(CMainFrame, CMainFrameBase)
 	ON_WM_CREATE()
 	ON_COMMAND(ID_TEST_FLOAT, OnTestFloat)
+	ON_COMMAND(ID_TEST_SNAPPREVIEW, OnTestSnapPreview)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -268,4 +270,14 @@ void CMainFrame::OnTestFloat()
 		pFloatFrame->Create(nullptr);
 		pFloatFrame->AttachMDIChild(pWnd);
 	}
+}
+
+void CMainFrame::OnTestSnapPreview()
+{
+	CRect rect;
+	GetWindowRect(rect);
+	rect.OffsetRect(10, 10);
+	auto pSnapWnd = new CSnapPreviewWnd;
+	pSnapWnd->Create(this);
+	pSnapWnd->ShowAt(rect);
 }

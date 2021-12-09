@@ -160,6 +160,7 @@ BEGIN
     POPUP "&Test"
     BEGIN
         MENUITEM "Float",                       ID_TEST_FLOAT
+        MENUITEM "Snap Preview",                ID_TEST_SNAPPREVIEW
     END
     POPUP "&Window"
     BEGIN

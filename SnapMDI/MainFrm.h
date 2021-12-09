@@ -65,6 +65,7 @@ protected:  // control bar embedded members
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnTestFloat();
+	afx_msg void OnTestSnapPreview();
 	DECLARE_MESSAGE_MAP()
 
 };
