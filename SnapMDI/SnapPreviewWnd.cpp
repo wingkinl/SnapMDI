@@ -3,7 +3,6 @@
 #include "SnapPreviewWnd.h"
 
 CSnapPreviewWnd::CSnapPreviewWnd()
-	: m_pWndOwner(NULL)
 {
 }
 
@@ -11,18 +10,16 @@ CSnapPreviewWnd::~CSnapPreviewWnd()
 {
 }
 
-void CSnapPreviewWnd::Create(CWnd* pwndOwner)
+void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 {
-	ASSERT_VALID(pwndOwner);
-
-	m_pWndOwner = pwndOwner;
+	ASSERT_VALID(pWndOwner);
 
 	CRect rect;
 	rect.SetRectEmpty();
 
 	DWORD dwExStyle = (GetGlobalData()->m_nBitsPerPixel > 8) ? WS_EX_LAYERED : 0;
 
-	CreateEx(dwExStyle, AfxRegisterWndClass(0), _T(""), WS_POPUP, rect, pwndOwner, NULL);
+	CreateEx(dwExStyle, AfxRegisterWndClass(0), _T(""), WS_POPUP, rect, pWndOwner, NULL);
 
 	if (dwExStyle == WS_EX_LAYERED)
 	{

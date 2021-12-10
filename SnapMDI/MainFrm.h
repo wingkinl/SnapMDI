@@ -5,8 +5,9 @@
 #pragma once
 
 class CMainFrame;
+class CSnapPreviewWnd;
 
-class CFloatFrameBase : public CMDIFrameWnd
+class CFloatFrameBase : public CMDIFrameWndEx
 {
 public:
 	void AttachMDIChild(CMDIChildWnd* pWndChild, bool bMaximize = true);
@@ -58,8 +59,8 @@ public:
 #endif
 
 protected:  // control bar embedded members
-	CToolBar          m_wndToolBar;
 	CStatusBar        m_wndStatusBar;
+	CSnapPreviewWnd* m_pSnapPreviewWnd = nullptr;
 
 // Generated message map functions
 protected:

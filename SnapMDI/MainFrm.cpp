@@ -204,6 +204,7 @@ CMainFrame::CMainFrame() noexcept
 
 CMainFrame::~CMainFrame()
 {
+	delete m_pSnapPreviewWnd;
 }
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
@@ -211,25 +212,12 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CMainFrameBase::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP | CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) ||
-		!m_wndToolBar.LoadToolBar(IDR_MAINFRAME))
-	{
-		TRACE0("Failed to create toolbar\n");
-		return -1;      // fail to create
-	}
-
 	if (!m_wndStatusBar.Create(this))
 	{
 		TRACE0("Failed to create status bar\n");
 		return -1;      // fail to create
 	}
 	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
-
-	// TODO: Delete these three lines if you don't want the toolbar to be dockable
-	m_wndToolBar.EnableDocking(CBRS_ALIGN_ANY);
-	EnableDocking(CBRS_ALIGN_ANY);
-	DockControlBar(&m_wndToolBar);
-
 
 	return 0;
 }
@@ -274,10 +262,20 @@ void CMainFrame::OnTestFloat()
 
 void CMainFrame::OnTestSnapPreview()
 {
+	if (m_pSnapPreviewWnd->GetSafeHwnd())
+	{
+		if (m_pSnapPreviewWnd->IsWindowVisible())
+		{
+			m_pSnapPreviewWnd->ShowWindow(SW_HIDE);
+			return;
+		}
+	}
 	CRect rect;
-	GetWindowRect(rect);
-	rect.OffsetRect(10, 10);
-	auto pSnapWnd = new CSnapPreviewWnd;
-	pSnapWnd->Create(this);
-	pSnapWnd->ShowAt(rect);
+	m_wndClientArea.GetWindowRect(rect);
+	if (!m_pSnapPreviewWnd)
+	{
+		m_pSnapPreviewWnd = new CSnapPreviewWnd;
+		m_pSnapPreviewWnd->Create(&m_wndClientArea);
+	}
+	m_pSnapPreviewWnd->ShowAt(rect);
 }
