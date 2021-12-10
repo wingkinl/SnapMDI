@@ -23,7 +23,7 @@ public:
 	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 protected:
-
+	COLORREF m_crfBackground;
 // Implementation
 public:
 	virtual ~CSnapMDIView();

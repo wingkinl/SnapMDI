@@ -59,7 +59,9 @@ public:
 #endif
 
 protected:  // control bar embedded members
-	CStatusBar        m_wndStatusBar;
+	CMFCMenuBar		m_wndMenuBar;
+	CMFCStatusBar	m_wndStatusBar;
+
 	CSnapPreviewWnd* m_pSnapPreviewWnd = nullptr;
 
 // Generated message map functions

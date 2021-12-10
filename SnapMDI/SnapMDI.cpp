@@ -20,11 +20,11 @@
 
 // CSnapMDIApp
 
-BEGIN_MESSAGE_MAP(CSnapMDIApp, CWinApp)
+BEGIN_MESSAGE_MAP(CSnapMDIApp, CWinAppEx)
 	ON_COMMAND(ID_APP_ABOUT, &CSnapMDIApp::OnAppAbout)
 	// Standard file based document commands
-	ON_COMMAND(ID_FILE_NEW, &CWinApp::OnFileNew)
-	ON_COMMAND(ID_FILE_OPEN, &CWinApp::OnFileOpen)
+	ON_COMMAND(ID_FILE_NEW, &CWinAppEx::OnFileNew)
+	ON_COMMAND(ID_FILE_OPEN, &CWinAppEx::OnFileOpen)
 END_MESSAGE_MAP()
 
 
@@ -60,7 +60,7 @@ BOOL CSnapMDIApp::InitInstance()
 	InitCtrls.dwICC = ICC_WIN95_CLASSES;
 	InitCommonControlsEx(&InitCtrls);
 
-	CWinApp::InitInstance();
+	CWinAppEx::InitInstance();
 
 
 	EnableTaskbarInteraction(FALSE);
@@ -120,7 +120,7 @@ BOOL CSnapMDIApp::InitInstance()
 int CSnapMDIApp::ExitInstance()
 {
 	//TODO: handle additional resources you may have added
-	return CWinApp::ExitInstance();
+	return CWinAppEx::ExitInstance();
 }
 
 // CSnapMDIApp message handlers

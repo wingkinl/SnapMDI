@@ -14,7 +14,7 @@
 // See SnapMDI.cpp for the implementation of this class
 //
 
-class CSnapMDIApp : public CWinApp
+class CSnapMDIApp : public CWinAppEx
 {
 public:
 	CSnapMDIApp() noexcept;

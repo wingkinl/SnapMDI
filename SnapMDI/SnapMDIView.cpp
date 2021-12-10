@@ -29,8 +29,8 @@ END_MESSAGE_MAP()
 
 CSnapMDIView::CSnapMDIView() noexcept
 {
-	// TODO: add construction code here
-
+	static bool once = (std::srand(GetTickCount()), true);
+	m_crfBackground = RGB((BYTE)(rand()%255), (BYTE)(rand() % 255), (BYTE)(rand() % 255));
 }
 
 CSnapMDIView::~CSnapMDIView()
@@ -47,14 +47,16 @@ BOOL CSnapMDIView::PreCreateWindow(CREATESTRUCT& cs)
 
 // CSnapMDIView drawing
 
-void CSnapMDIView::OnDraw(CDC* /*pDC*/)
+void CSnapMDIView::OnDraw(CDC* pDC)
 {
 	CSnapMDIDoc* pDoc = GetDocument();
 	ASSERT_VALID(pDoc);
 	if (!pDoc)
 		return;
 
-	// TODO: add draw code for native data here
+	CRect rect;
+	GetClientRect(rect);
+	pDC->FillSolidRect(rect, m_crfBackground);
 }
 
 

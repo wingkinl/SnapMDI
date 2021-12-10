@@ -4,6 +4,7 @@
 
 CSnapPreviewWnd::CSnapPreviewWnd()
 {
+
 }
 
 CSnapPreviewWnd::~CSnapPreviewWnd()
@@ -17,22 +18,46 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 	CRect rect;
 	rect.SetRectEmpty();
 
-	DWORD dwExStyle = (GetGlobalData()->m_nBitsPerPixel > 8) ? WS_EX_LAYERED : 0;
+	m_bLayered = GetGlobalData()->m_nBitsPerPixel > 8;
+	DWORD dwExStyle = m_bLayered ? WS_EX_LAYERED : 0;
 
 	CreateEx(dwExStyle, AfxRegisterWndClass(0), _T(""), WS_POPUP, rect, pWndOwner, NULL);
 
-	if (dwExStyle == WS_EX_LAYERED)
+	if (m_bLayered)
 	{
 		SetLayeredWindowAttributes(0, 100, LWA_ALPHA);
 	}
 }
 
-void CSnapPreviewWnd::ShowAt(CRect rect)
+void CSnapPreviewWnd::ShowAt(CWnd* pWnd, CRect rect)
 {
 	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
 
 	RedrawWindow();
 }
+
+void CSnapPreviewWnd::Hide(CWnd* pWnd)
+{
+	ShowWindow(SW_HIDE);
+}
+
+void CSnapPreviewWnd::EnableAnimation(bool val)
+{
+	m_bEnableAnimation = val;
+}
+
+bool CSnapPreviewWnd::IsAnimationEnabled() const
+{
+	return m_bEnableAnimation;
+}
+
+bool CSnapPreviewWnd::ShouldDoAnimation() const
+{
+	if (!m_bEnableAnimation)
+		return false;
+	return m_bLayered;
+}
+
 
 BEGIN_MESSAGE_MAP(CSnapPreviewWnd, CWnd)
 	ON_WM_PAINT()
@@ -51,7 +76,7 @@ void CSnapPreviewWnd::OnPaint()
 
 	COLORREF colorFill = RGB(47, 103, 190);
 
-	if (GetGlobalData()->m_nBitsPerPixel > 8)
+	if (m_bLayered)
 	{
 		CBrush brFill(CDrawingManager::PixelAlpha(colorFill, 105));
 		//dc.FillRect(rect, &brFill);
