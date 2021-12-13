@@ -8,6 +8,7 @@
 #endif
 
 #include "resource.h"       // main symbols
+#include "SnapWindowManager.h"
 
 
 // CSnapMDIApp:
@@ -19,6 +20,8 @@ class CSnapMDIApp : public CWinAppEx
 public:
 	CSnapMDIApp() noexcept;
 
+
+	CSnapWindowManager m_snapWndManager;
 
 // Overrides
 public:
