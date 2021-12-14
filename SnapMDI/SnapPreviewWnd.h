@@ -6,14 +6,22 @@ public:
 	CSnapPreviewWnd();
 	void Create(CWnd* pWndOwner);
 
-	void ShowAt(CWnd* pWnd, CRect rect);
-	void Hide(CWnd* pWnd);
+	void StartSnapping();
+	void StopSnapping();
+
+	// rect in screen coordinates
+	void ShowAt(CRect rect);
+	void Hide();
 
 	void EnableAnimation(bool val);
 	bool IsAnimationEnabled() const;
 
+	void GetSnapRect(CRect& rect) const;
+
+	CRect	m_rcOwner;
 	// Attributes
 protected:
+	CWnd*	m_pWndOwner = nullptr;
 	bool	m_bEnableAnimation = true;
 	bool	m_bLayered = false;
 

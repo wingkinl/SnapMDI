@@ -204,7 +204,6 @@ CMainFrame::CMainFrame() noexcept
 
 CMainFrame::~CMainFrame()
 {
-	delete m_pSnapPreviewWnd;
 }
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
@@ -230,6 +229,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	//m_wndMenuBar.EnableDocking(CBRS_ALIGN_ANY);
 	EnableDocking(CBRS_ALIGN_ANY);
 	DockPane(&m_wndMenuBar);
+
+	theApp.m_snapWndManager.InitSnap(&m_wndClientArea);
 
 	return 0;
 }
@@ -274,20 +275,5 @@ void CMainFrame::OnTestFloat()
 
 void CMainFrame::OnTestSnapPreview()
 {
-	if (m_pSnapPreviewWnd->GetSafeHwnd())
-	{
-		if (m_pSnapPreviewWnd->IsWindowVisible())
-		{
-			m_pSnapPreviewWnd->ShowWindow(SW_HIDE);
-			return;
-		}
-	}
-	CRect rect;
-	m_wndClientArea.GetWindowRect(rect);
-	if (!m_pSnapPreviewWnd)
-	{
-		m_pSnapPreviewWnd = new CSnapPreviewWnd;
-		m_pSnapPreviewWnd->Create(&m_wndClientArea);
-	}
-	m_pSnapPreviewWnd->ShowAt(&m_wndClientArea, rect);
+	
 }

@@ -14,6 +14,7 @@ CSnapPreviewWnd::~CSnapPreviewWnd()
 void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 {
 	ASSERT_VALID(pWndOwner);
+	m_pWndOwner = pWndOwner;
 
 	CRect rect;
 	rect.SetRectEmpty();
@@ -29,14 +30,25 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 	}
 }
 
-void CSnapPreviewWnd::ShowAt(CWnd* pWnd, CRect rect)
+void CSnapPreviewWnd::StartSnapping()
+{
+	ASSERT(m_pWndOwner && !IsWindowVisible());
+	m_pWndOwner->GetWindowRect(&m_rcOwner);
+}
+
+void CSnapPreviewWnd::StopSnapping()
+{
+	ShowWindow(SW_HIDE);
+}
+
+void CSnapPreviewWnd::ShowAt(CRect rect)
 {
 	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
 
 	RedrawWindow();
 }
 
-void CSnapPreviewWnd::Hide(CWnd* pWnd)
+void CSnapPreviewWnd::Hide()
 {
 	ShowWindow(SW_HIDE);
 }
@@ -49,6 +61,11 @@ void CSnapPreviewWnd::EnableAnimation(bool val)
 bool CSnapPreviewWnd::IsAnimationEnabled() const
 {
 	return m_bEnableAnimation;
+}
+
+void CSnapPreviewWnd::GetSnapRect(CRect& rect) const
+{
+	GetWindowRect(rect);
 }
 
 bool CSnapPreviewWnd::ShouldDoAnimation() const

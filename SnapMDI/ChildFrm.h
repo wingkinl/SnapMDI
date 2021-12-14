@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "SnapWindowManager.h"
 
 class CChildFrame : public CMDIChildWnd
 {

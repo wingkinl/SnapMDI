@@ -22,9 +22,8 @@ END_MESSAGE_MAP()
 // CChildFrame construction/destruction
 
 CChildFrame::CChildFrame() noexcept
-	: m_snapHelper(this)
 {
-	// TODO: add member initialization code here
+	m_snapHelper.InitSnap(&theApp.m_snapWndManager, this);
 }
 
 CChildFrame::~CChildFrame()
@@ -60,7 +59,8 @@ void CChildFrame::Dump(CDumpContext& dc) const
 
 BOOL CChildFrame::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 {
-	if (m_snapHelper.OnWndMsg(message, wParam, lParam, pResult))
+	SnapWndMsg msg = {&m_snapHelper, message, wParam, lParam, pResult};
+	if (m_snapHelper.OnWndMsg(msg))
 		return TRUE;
 	return __super::OnWndMsg(message, wParam, lParam, pResult);
 }
