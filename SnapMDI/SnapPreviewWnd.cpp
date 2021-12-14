@@ -41,9 +41,9 @@ void CSnapPreviewWnd::StopSnapping()
 	ShowWindow(SW_HIDE);
 }
 
-void CSnapPreviewWnd::ShowAt(CRect rect)
+void CSnapPreviewWnd::ShowAt(const CRect& rect)
 {
-	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
+	RepositionWindow(rect);
 
 	RedrawWindow();
 }
@@ -66,6 +66,11 @@ bool CSnapPreviewWnd::IsAnimationEnabled() const
 void CSnapPreviewWnd::GetSnapRect(CRect& rect) const
 {
 	GetWindowRect(rect);
+}
+
+void CSnapPreviewWnd::RepositionWindow(const CRect& rect)
+{
+	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
 }
 
 bool CSnapPreviewWnd::ShouldDoAnimation() const

@@ -75,7 +75,7 @@
       <Filter>SnapInChild</Filter>
     </ClCompile>
     <ClCompile Include="SnapWindowManager.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>SnapInChild</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

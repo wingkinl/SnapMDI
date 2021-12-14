@@ -49,10 +49,10 @@ protected:
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
-	POINT	m_ptStart = { 0 };
-	BOOL	m_bEnable = FALSE;
-	BOOL	m_bIsMoving = FALSE;
-	SnapGridType	m_nCurGridType;
+	POINT				m_ptStart = { 0 };
+	BOOL				m_bEnterSizeMove = FALSE;
+	BOOL				m_bIsMoving = FALSE;
+	SnapGridType		m_nCurGridType;
 };
 
 

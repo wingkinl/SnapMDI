@@ -10,7 +10,7 @@ public:
 	void StopSnapping();
 
 	// rect in screen coordinates
-	void ShowAt(CRect rect);
+	void ShowAt(const CRect& rect);
 	void Hide();
 
 	void EnableAnimation(bool val);
@@ -19,8 +19,10 @@ public:
 	void GetSnapRect(CRect& rect) const;
 
 	CRect	m_rcOwner;
+private:
+	void RepositionWindow(const CRect& rect);
 	// Attributes
-protected:
+private:
 	CWnd*	m_pWndOwner = nullptr;
 	bool	m_bEnableAnimation = true;
 	bool	m_bLayered = false;

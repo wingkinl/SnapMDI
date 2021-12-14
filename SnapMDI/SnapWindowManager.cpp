@@ -41,26 +41,26 @@ BOOL CSnapWindowManager::OnWndMsg(SnapWndMsg& msg)
 	{
 	case WM_ENTERSIZEMOVE:
 		// Do not handle it for system menu
-		m_bEnable = GetKeyState(VK_LBUTTON) < 0;
-		if (m_bEnable)
+		m_bEnterSizeMove = GetKeyState(VK_LBUTTON) < 0 && !msg.pHelper->GetWnd()->IsIconic();
+		if (m_bEnterSizeMove)
 		{
 			GetCursorPos(&m_ptStart);
 		}
 		break;
 	case WM_EXITSIZEMOVE:
-		if (m_bEnable)
+		if (m_bEnterSizeMove)
 		{
 			if (m_bIsMoving)
 			{
 				ASSERT(msg.pHelper == m_pCurSnapWnd);
 				StopMoving();
 			}
-			m_bEnable = FALSE;
+			m_bEnterSizeMove = FALSE;
 			m_bIsMoving = FALSE;
 		}
 		break;
 	case WM_MOVING:
-		if (m_bEnable)
+		if (m_bEnterSizeMove)
 		{
 			CPoint ptCurrent;
 			GetCursorPos(&ptCurrent);
@@ -128,6 +128,7 @@ void CSnapWindowManager::StopMoving()
 	}
 
 	m_pCurSnapWnd = nullptr;
+	m_nCurGridType = SnapGridType::None;
 }
 
 void CSnapWindowManager::OnMoving(CPoint pt)
