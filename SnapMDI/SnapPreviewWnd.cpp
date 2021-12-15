@@ -8,7 +8,6 @@
 
 CSnapPreviewWnd::CSnapPreviewWnd()
 {
-
 }
 
 CSnapPreviewWnd::~CSnapPreviewWnd()
@@ -45,18 +44,24 @@ void CSnapPreviewWnd::StopSnapping()
 	ShowWindow(SW_HIDE);
 }
 
-void CSnapPreviewWnd::ShowAt(CWnd* pWnd, const CRect& rect)
+void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 {
-	if (m_bEnableAnimation)
+	if (ShouldDoAnimation())
 	{
-		CRect rectFrom;
-		LPCRECT pRectFrom = nullptr;
-		if (false)
+		ASSERT(!m_pActiveSnapWnd || m_pActiveSnapWnd == pActiveSnapWnd);
+		m_pActiveSnapWnd = pActiveSnapWnd;
+		if (IsWindowVisible())
 		{
-			GetWindowInOwnerRect(pWnd, rectFrom);
-			pRectFrom = &rectFrom;
+			m_rectFrom = m_rectCur;
+		}
+		else
+		{
+			GetWindowInOwnerRect(pActiveSnapWnd, m_rectFrom);
+			m_rectCur = m_rectFrom;
 		}
 		m_bHiding = false;
+		m_rectTo = rect;
+		ScheduleAnimation();
 	}
 	else
 	{
@@ -64,13 +69,13 @@ void CSnapPreviewWnd::ShowAt(CWnd* pWnd, const CRect& rect)
 	}
 }
 
-void CSnapPreviewWnd::Hide(CWnd* pWnd)
+void CSnapPreviewWnd::Hide()
 {
-	if (m_bEnableAnimation)
+	if (ShouldDoAnimation())
 	{
-		CRect rect;
-		GetWindowInOwnerRect(pWnd, rect);
 		m_bHiding = true;
+		m_rectFrom = m_rectCur;
+		ScheduleAnimation();
 	}
 	else
 	{
@@ -93,18 +98,24 @@ void CSnapPreviewWnd::GetSnapRect(CRect& rect) const
 	GetWindowRect(rect);
 }
 
-void CSnapPreviewWnd::RepositionWindow(const RECT& rect)
+void CSnapPreviewWnd::RepositionWindow(const CRect& rect)
 {
-	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, 
+	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),
 		SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
 	RedrawWindow();
 }
 
-void CSnapPreviewWnd::OnAnimationFinished()
+void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
 {
-	if (m_bHiding)
+	m_rectCur = rect;
+	RepositionWindow(rect);
+	if (bFinish)
 	{
-		ShowWindow(SW_HIDE);
+		if (m_bHiding)
+		{
+			ShowWindow(SW_HIDE);
+			m_pActiveSnapWnd = nullptr;
+		}
 	}
 }
 
@@ -119,6 +130,25 @@ void CSnapPreviewWnd::GetWindowInOwnerRect(CWnd* pWnd, CRect& rect) const
 	rect.bottom = std::min(rect.bottom, rcOwner.bottom);
 }
 
+void CSnapPreviewWnd::StopAnimation()
+{
+	if (m_nTimerID)
+	{
+		KillTimer(m_nTimerID);
+		m_nTimerID = 0;
+	}
+}
+
+enum
+{	AnimationInterval = 10
+};
+
+void CSnapPreviewWnd::ScheduleAnimation()
+{
+	m_AniStartTime = std::chrono::steady_clock::now();
+	m_nTimerID = SetTimer(100, AnimationInterval, nullptr);
+}
+
 bool CSnapPreviewWnd::ShouldDoAnimation() const
 {
 	if (!m_bEnableAnimation)
@@ -130,6 +160,8 @@ bool CSnapPreviewWnd::ShouldDoAnimation() const
 BEGIN_MESSAGE_MAP(CSnapPreviewWnd, CWnd)
 	ON_WM_PAINT()
 	ON_WM_ERASEBKGND()
+	ON_WM_TIMER()
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -172,5 +204,62 @@ void CSnapPreviewWnd::OnPaint()
 BOOL CSnapPreviewWnd::OnEraseBkgnd(CDC* /*pDC*/)
 {
 	return TRUE;
+}
+
+// How to programmatically move a window slowly, as if the user were doing it?
+// see https://stackoverflow.com/questions/932706/how-to-programmatically-move-a-window-slowly-as-if-the-user-were-doing-it
+inline static double SmoothMoveELX(double x)
+{
+	double dPI = atan(1) * 4;
+	return (cos((1 - x) * dPI) + 1) / 2;
+}
+
+inline static LONG CalcSmoothPos(double pos, LONG from, LONG to)
+{
+	if (from == to || pos > 1.)
+		return to;
+	auto newPos = from * (1 - SmoothMoveELX(pos))
+		+ to * SmoothMoveELX(pos);
+	return (LONG)newPos;
+}
+
+void CSnapPreviewWnd::OnTimer(UINT_PTR nIDEvent)
+{
+	if (nIDEvent != m_nTimerID)
+		return;
+	auto curTime = std::chrono::steady_clock::now();
+	std::chrono::duration<double> timeDiff = curTime - m_AniStartTime;
+	auto timeDiffCount = timeDiff.count();
+
+	constexpr double duration = 0.2;
+
+	if (m_bHiding)
+	{
+		GetWindowInOwnerRect(m_pActiveSnapWnd, m_rectTo);
+	}
+
+	CRect rect;
+	bool bFinish = timeDiffCount >= duration;
+	if (bFinish)
+	{
+		rect = m_rectTo;
+	}
+	else
+	{
+		auto dPos = (double)timeDiffCount / duration;
+		rect.left = CalcSmoothPos(dPos, m_rectFrom.left, m_rectTo.left);
+		rect.top = CalcSmoothPos(dPos, m_rectFrom.top, m_rectTo.top);
+		rect.right = CalcSmoothPos(dPos, m_rectFrom.right, m_rectTo.right);
+		rect.bottom = CalcSmoothPos(dPos, m_rectFrom.bottom, m_rectTo.bottom);
+	}
+	OnAnimationTo(rect, bFinish);
+	if (bFinish)
+		StopAnimation();
+}
+
+void CSnapPreviewWnd::OnDestroy()
+{
+	StopAnimation();
+	__super::OnDestroy();
 }
 

@@ -142,7 +142,7 @@ void CSnapWindowManager::OnMoving(CPoint pt)
 		switch (m_nCurGridType)
 		{
 		case SnapGridType::None:
-			m_wndSnapPreview->Hide(m_pCurSnapWnd->GetWnd());
+			m_wndSnapPreview->Hide();
 			break;
 		default:
 			m_wndSnapPreview->ShowAt(m_pCurSnapWnd->GetWnd(), grid.rect);
