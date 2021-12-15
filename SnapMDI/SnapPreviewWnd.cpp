@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "framework.h"
 #include "SnapPreviewWnd.h"
+#include <algorithm>
+
+#undef min
+#undef max
 
 CSnapPreviewWnd::CSnapPreviewWnd()
 {
@@ -41,16 +45,37 @@ void CSnapPreviewWnd::StopSnapping()
 	ShowWindow(SW_HIDE);
 }
 
-void CSnapPreviewWnd::ShowAt(const CRect& rect)
+void CSnapPreviewWnd::ShowAt(CWnd* pWnd, const CRect& rect)
 {
-	RepositionWindow(rect);
-
-	RedrawWindow();
+	if (m_bEnableAnimation)
+	{
+		CRect rectFrom;
+		LPCRECT pRectFrom = nullptr;
+		if (false)
+		{
+			GetWindowInOwnerRect(pWnd, rectFrom);
+			pRectFrom = &rectFrom;
+		}
+		m_bHiding = false;
+	}
+	else
+	{
+		RepositionWindow(rect);
+	}
 }
 
-void CSnapPreviewWnd::Hide()
+void CSnapPreviewWnd::Hide(CWnd* pWnd)
 {
-	ShowWindow(SW_HIDE);
+	if (m_bEnableAnimation)
+	{
+		CRect rect;
+		GetWindowInOwnerRect(pWnd, rect);
+		m_bHiding = true;
+	}
+	else
+	{
+		ShowWindow(SW_HIDE);
+	}
 }
 
 void CSnapPreviewWnd::EnableAnimation(bool val)
@@ -68,9 +93,30 @@ void CSnapPreviewWnd::GetSnapRect(CRect& rect) const
 	GetWindowRect(rect);
 }
 
-void CSnapPreviewWnd::RepositionWindow(const CRect& rect)
+void CSnapPreviewWnd::RepositionWindow(const RECT& rect)
 {
-	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
+	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, 
+		SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
+	RedrawWindow();
+}
+
+void CSnapPreviewWnd::OnAnimationFinished()
+{
+	if (m_bHiding)
+	{
+		ShowWindow(SW_HIDE);
+	}
+}
+
+void CSnapPreviewWnd::GetWindowInOwnerRect(CWnd* pWnd, CRect& rect) const
+{
+	pWnd->GetWindowRect(rect);
+	CRect rcOwner;
+	m_pWndOwner->GetWindowRect(rcOwner);
+	rect.left = std::max(rect.left, rcOwner.left);
+	rect.top = std::max(rect.top, rcOwner.top);
+	rect.right = std::min(rect.right, rcOwner.right);
+	rect.bottom = std::min(rect.bottom, rcOwner.bottom);
 }
 
 bool CSnapPreviewWnd::ShouldDoAnimation() const
@@ -127,3 +173,4 @@ BOOL CSnapPreviewWnd::OnEraseBkgnd(CDC* /*pDC*/)
 {
 	return TRUE;
 }
+

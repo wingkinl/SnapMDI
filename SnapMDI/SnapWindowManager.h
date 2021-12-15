@@ -32,7 +32,7 @@ protected:
 
 	void StartMoving(CSnapWindowHelper* pWndHelper);
 
-	void StopMoving();
+	void StopMoving(bool bAbort = false);
 
 	void OnMoving(CPoint pt);
 

@@ -111,12 +111,12 @@ void CSnapWindowManager::StartMoving(CSnapWindowHelper* pWndHelper)
 	}
 }
 
-void CSnapWindowManager::StopMoving()
+void CSnapWindowManager::StopMoving(bool bAbort)
 {
 	if (!m_wndSnapPreview)
 		return;
 	m_wndSnapPreview->StopSnapping();
-	if (m_nCurGridType != SnapGridType::None)
+	if (!bAbort && m_nCurGridType != SnapGridType::None)
 	{
 		CRect rect;
 		m_wndSnapPreview->GetSnapRect(rect);
@@ -142,10 +142,10 @@ void CSnapWindowManager::OnMoving(CPoint pt)
 		switch (m_nCurGridType)
 		{
 		case SnapGridType::None:
-			m_wndSnapPreview->Hide();
+			m_wndSnapPreview->Hide(m_pCurSnapWnd->GetWnd());
 			break;
 		default:
-			m_wndSnapPreview->ShowAt(grid.rect);
+			m_wndSnapPreview->ShowAt(m_pCurSnapWnd->GetWnd(), grid.rect);
 			break;
 		}
 	}
