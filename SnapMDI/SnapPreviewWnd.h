@@ -35,7 +35,7 @@ public:
 
 	void GetSnapRect(CRect& rect) const;
 
-	DWORD GetConfigFlags() const { return m_nConfigs; }
+	inline DWORD GetConfigFlags() const { return m_nConfigs; }
 
 	void RepositionWindow(const CRect& rect);
 
