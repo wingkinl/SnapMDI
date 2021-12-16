@@ -365,10 +365,22 @@ public:
 		HR(D2D1CreateDevice(devicex.Get(),
 			nullptr, // Default properties
 			device2d.GetAddressOf()));
-		HR(DCompositionCreateDevice2(
+
+		//HR(DCompositionCreateDevice2(
+		//	device2d.Get(),
+		//	__uuidof(m_device),
+		//	reinterpret_cast<void**>(m_device.ReleaseAndGetAddressOf())));
+
+		HR(DCompositionCreateDevice3( // only this factory can give you an IDCompositionDevice3 implementation
 			device2d.Get(),
 			__uuidof(m_device),
-			reinterpret_cast<void**>(m_device.ReleaseAndGetAddressOf())));
+			reinterpret_cast<void**>(m_device.GetAddressOf())));
+
+		HR(m_device->QueryInterface(__uuidof(IDCompositionDevice3), (LPVOID*)&dcompDevice3));
+
+		HR(dcompDevice3->CreateGaussianBlurEffect(blurEffect.GetAddressOf()));
+		HR(dcompDevice3->CreateSaturationEffect(saturationEffect.GetAddressOf()));
+
 		auto hWnd = m_pPreviewWnd->GetSafeHwnd();
 		HR(m_device->CreateTargetForHwnd(hWnd,
 			true, // Top most
@@ -384,13 +396,19 @@ public:
 			m_surface.ReleaseAndGetAddressOf()));
 		HR(m_visual->SetContent(m_surface.Get()));
 		HR(m_target->SetRoot(m_visual.Get()));
+
+
+		saturationEffect->SetSaturation(2);
+		blurEffect->SetBorderMode(D2D1_BORDER_MODE_HARD);
+		blurEffect->SetInput(0, saturationEffect.Get(), 0);
+		blurEffect->SetStandardDeviation(1.f);
+		m_visual->SetEffect(blurEffect.Get());
+
+
 		ComPtr<ID2D1DeviceContext> dc;
 		HR(device2d->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
 			dc.GetAddressOf()));
-		D2D_COLOR_F const color = ColorF(0.26f,
-			0.56f,
-			0.87f,
-			0.5f);
+		D2D_COLOR_F const color = { 0.26f, 0.56f, 0.87f, 0.5f };
 		HR(dc->CreateSolidColorBrush(color,
 			m_brush.ReleaseAndGetAddressOf()));
 		HMONITOR const monitor = MonitorFromWindow(hWnd,
@@ -482,7 +500,26 @@ public:
 				rect.right = DPtoLP(m_rect.right, m_dpi.y);
 				rect.bottom = DPtoLP(m_rect.bottom, m_dpi.y);
 			}
-			dc->FillRectangle(rect, m_brush.Get());
+			//dc->FillRectangle(rect, m_brush.Get());
+			D2D1_ROUNDED_RECT rRect;
+			rRect.rect = rect;
+			int width = GetSystemMetrics(SM_CXVSCROLL) / 2;
+			auto gap = DPtoLP(width, m_dpi.x);
+			
+			rRect.radiusX = 10;
+			rRect.radiusY = 10;
+			
+			m_brush->SetColor({0.8f, 0.8f, 0.8f, 0.5f});
+			//dc->FillRectangle(rect, m_brush.Get());
+			dc->FillRoundedRectangle(rRect, m_brush.Get());
+
+			m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.5f });
+
+			rRect.rect.left += gap;
+			rRect.rect.top += gap;
+			rRect.rect.right -= gap;
+			rRect.rect.bottom -= gap;
+			dc->FillRoundedRectangle(rRect, m_brush.Get());
 
 			HR(m_surface->EndDraw());
 			HR(m_device->Commit());
@@ -548,6 +585,10 @@ private:
 	ComPtr<IDCompositionTarget>  m_target;
 	ComPtr<IDCompositionVisual2> m_visual;
 	ComPtr<IDCompositionSurface> m_surface;
+
+	ComPtr<IDCompositionDevice3> dcompDevice3;
+	ComPtr<IDCompositionGaussianBlurEffect> blurEffect;
+	ComPtr<IDCompositionSaturationEffect> saturationEffect;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -555,7 +596,6 @@ private:
 CSnapPreviewWnd::CSnapPreviewWnd(DWORD nConfigFlags)
 {
 	m_nConfigs = nConfigFlags;
-	//m_nConfigs |= AnimateByMovingWnd;
 }
 
 CSnapPreviewWnd::~CSnapPreviewWnd()
