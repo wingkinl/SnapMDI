@@ -1,29 +1,46 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
+
+class CSnapAnimationImp;
 
 class CSnapPreviewWnd : public CWnd
 {
 public:
-	CSnapPreviewWnd();
+	enum ConfigFlag : DWORD
+	{
+		AnimationTechMask		= 0x00000003,
+		// Direct Composition, fall back to layered if not supported
+		AnimationTechDC			= 0x00000000,
+		// Alpha blended layered window
+		AnimationTechAlpha		= 0x00000001,
+		// Invert the color of the area
+		AnimationTechInvert		= 0x00000002,
+		// Animation implemented by moving this window
+		AnimateByMovingWnd		= 0x00000010,
+		DisableAnimation		= 0x00000020,
+	};
+
+	CSnapPreviewWnd(DWORD nConfigFlags = 0);
+
 	void Create(CWnd* pWndOwner);
 
 	void StartSnapping();
-	void StopSnapping();
+	void StopSnapping(bool bAbort);
 
 	// rect in screen coordinates
 	void ShowAt(CWnd* pActiveSnapWnd, const CRect& rect);
 	void Hide();
 
-	void EnableAnimation(bool val);
-	bool IsAnimationEnabled() const;
-
 	void GetSnapRect(CRect& rect) const;
+
+	DWORD GetConfigFlags() const { return m_nConfigs; }
+
+	void RepositionWindow(const CRect& rect);
 
 	CRect	m_rcOwner;
 private:
-	void RepositionWindow(const CRect& rect);
-
 	void OnAnimationTo(const CRect& rect, bool bFinish);
 
 	void GetWindowInOwnerRect(CWnd* pWnd, CRect& rect) const;
@@ -31,21 +48,34 @@ private:
 	void StopAnimation();
 
 	void ScheduleAnimation();
+
+	DWORD GetAnimationTech() const;
+
+	bool ShouldDoAnimation() const;
+
+	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
 	// Attributes
 private:
 	CWnd*	m_pWndOwner = nullptr;
 	CWnd*	m_pActiveSnapWnd = nullptr;
-	bool	m_bEnableAnimation = true;
-	bool	m_bLayered = false;
-	bool	m_bHiding = false;
+	DWORD	m_nConfigs = 0;
 
-	UINT_PTR	m_nTimerID = 0;
+	enum class AnimateStage
+	{
+		Ready,
+		Showing,
+		DropSnap,
+		Hiding,
+	};
+	AnimateStage	m_aniStage = AnimateStage::Ready;
+
+	std::unique_ptr<CSnapAnimationImp> m_animation;
+
+	UINT_PTR	m_nAniTimerID = 0;
 	std::chrono::time_point<std::chrono::steady_clock>	m_AniStartTime;
 	CRect		m_rectCur;
 	CRect		m_rectFrom;
 	CRect		m_rectTo;
-
-	bool ShouldDoAnimation() const;
 
 	// Implementation
 public:
@@ -53,7 +83,6 @@ public:
 
 	// Generated message map functions
 protected:
-	afx_msg void OnPaint();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnDestroy();

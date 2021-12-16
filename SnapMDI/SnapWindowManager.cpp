@@ -115,7 +115,7 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 {
 	if (!m_wndSnapPreview)
 		return;
-	m_wndSnapPreview->StopSnapping();
+	m_wndSnapPreview->StopSnapping(bAbort);
 	if (!bAbort && m_nCurGridType != SnapGridType::None)
 	{
 		CRect rect;
