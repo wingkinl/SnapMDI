@@ -7,23 +7,16 @@
 #include <gdiplus.h>
 using namespace Gdiplus;
 
-#include <shellscalingapi.h>
 #include <wrl.h>
 #include <d3d11_2.h>
 #include <d2d1_2.h>
 #include <d2d1_2helper.h>
 #include <dcomp.h>
-
-#pragma comment(lib, "shcore")
-#pragma comment(lib, "d3d11")
-#pragma comment(lib, "d2d1")
-#pragma comment(lib, "dcomp")
+#include <ShellScalingApi.h>
+#include <d2d1_1.h>
 
 using namespace Microsoft::WRL;
 using namespace D2D1;
-
-#include <ShellScalingAPI.h>
-#pragma comment(lib, "shcore")
 
 #undef min
 #undef max
@@ -37,8 +30,6 @@ public:
 	virtual BOOL Create(CWnd* pWndOwner) = 0;
 
 	virtual BOOL CanSupportAnimation() const { return FALSE; }
-
-	virtual BOOL CanSupportDropSnap() const { return FALSE; }
 
 	void OnAnimationTo(CRect rect)
 	{
@@ -136,7 +127,7 @@ public:
 		if (bOK)
 		{
 			if (IsAnimateByMovingWnd())
-				m_pPreviewWnd->SetLayeredWindowAttributes(0, 100, LWA_ALPHA);
+				m_pPreviewWnd->SetLayeredWindowAttributes(0, 128, LWA_ALPHA);
 			else
 			{
 				GdiplusStartupInput gdiplusStartupInput;
@@ -197,11 +188,11 @@ public:
 		m_pPreviewWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 		{
-			COLORREF crfFill = RGB(47, 103, 190);
+			COLORREF crfFill = RGB(66, 143, 222);
 
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
-			Gdiplus::Color color(100, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
-			Gdiplus::SolidBrush brush(Gdiplus::Color(100, 0xcc, 0xcc, 0xcc));
+			Gdiplus::Color color(128, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
+			Gdiplus::SolidBrush brush(Gdiplus::Color(128, 0xcc, 0xcc, 0xcc));
 			Gdiplus::Rect rc(rect.left, rect.top, rect.Width(), rect.Height());
 
 			Gdiplus::GraphicsPath path;
@@ -268,9 +259,9 @@ private:
 		CRect rect;
 		m_pPreviewWnd->GetClientRect(rect);
 
-		COLORREF crfFill = RGB(47, 103, 190);
+		COLORREF crfFill = RGB(66, 143, 222);
 
-		CBrush brFill(CDrawingManager::PixelAlpha(crfFill, 105));
+		CBrush brFill(crfFill);
 		//dc.FillRect(rect, &brFill);
 		int width = GetSystemMetrics(SM_CXVSCROLL);
 		CSize sz(width, width);
@@ -291,12 +282,62 @@ private:
 	ULONG_PTR m_gdiplusToken = 0;
 };
 
+using ProcDCompositionCreateDevice2 = decltype(DCompositionCreateDevice2)*;
+// minimum: Windows 8.1
+using ProcGetDpiForMonitor = decltype(GetDpiForMonitor)*;
+
+typedef HRESULT(*ProcD2D1CreateDevice)(
+	IDXGIDevice* dxgiDevice,
+	const D2D1_CREATION_PROPERTIES* creationProperties,
+	ID2D1Device** d2dDevice
+	);
+
 class CSnapAnimationImpDirectComposition : public CSnapAnimationImp
 {
+	static PFN_D3D11_CREATE_DEVICE	procD3D11CreateDevice;
+	static ProcD2D1CreateDevice		procD2D1CreateDevice;
+	static ProcDCompositionCreateDevice2 procDCompositionCreateDevice2;
+	static ProcGetDpiForMonitor procGetDpiForMonitor;
+	static BOOL s_bApplicableCheck;
 public:
 	static BOOL IsApplicable()
 	{
-		return IsWindows8OrGreater();
+		if (s_bApplicableCheck != (BOOL)-1)
+			return s_bApplicableCheck;
+		auto hD3D11 = LoadLibraryW(L"D3D11.dll");
+		if (hD3D11)
+		{
+			procD3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(hD3D11, "D3D11CreateDevice");
+		}
+		auto hD2d1 = LoadLibraryW(L"D2d1.dll");
+		if (hD2d1)
+		{
+			procD2D1CreateDevice = (ProcD2D1CreateDevice)GetProcAddress(hD2d1, "D2D1CreateDevice");
+		}
+		auto hDcomp = LoadLibraryW(L"Dcomp.dll");
+		if (hDcomp)
+		{
+			procDCompositionCreateDevice2 = (ProcDCompositionCreateDevice2)GetProcAddress(hDcomp, "DCompositionCreateDevice2");
+		}
+		auto hShcore = LoadLibraryW(L"Shcore.dll");
+		if (hShcore)
+		{
+			procGetDpiForMonitor = (ProcGetDpiForMonitor)GetProcAddress(hShcore, "GetDpiForMonitor");
+		}
+		BOOL bApplicable = procD3D11CreateDevice && procD2D1CreateDevice
+			&& procDCompositionCreateDevice2;
+		if (!bApplicable)
+		{
+			if (hD3D11)
+				FreeLibrary(hD3D11);
+			if (hD2d1)
+				FreeLibrary(hD2d1);
+			if (hDcomp)
+				FreeLibrary(hDcomp);
+			if (hShcore)
+				FreeLibrary(hShcore);
+		}
+		return s_bApplicableCheck = bApplicable;
 	}
 
 	BOOL Create(CWnd* pWndOwner) override
@@ -349,8 +390,8 @@ public:
 	{
 		if (IsDeviceCreated())
 			return;
-		TRACE0("CreateDeviceResources\r\n");
-		HR(D3D11CreateDevice(nullptr,	// Adapter
+
+		HR(procD3D11CreateDevice(nullptr,	// Adapter
 			D3D_DRIVER_TYPE_HARDWARE,
 			nullptr,	// Module
 			D3D11_CREATE_DEVICE_BGRA_SUPPORT,
@@ -362,24 +403,14 @@ public:
 		ComPtr<IDXGIDevice> devicex;
 		HR(m_device3d.As(&devicex));
 		ComPtr<ID2D1Device> device2d;
-		HR(D2D1CreateDevice(devicex.Get(),
+		HR(procD2D1CreateDevice(devicex.Get(),
 			nullptr, // Default properties
 			device2d.GetAddressOf()));
 
-		//HR(DCompositionCreateDevice2(
-		//	device2d.Get(),
-		//	__uuidof(m_device),
-		//	reinterpret_cast<void**>(m_device.ReleaseAndGetAddressOf())));
-
-		HR(DCompositionCreateDevice3( // only this factory can give you an IDCompositionDevice3 implementation
+		HR(procDCompositionCreateDevice2(
 			device2d.Get(),
 			__uuidof(m_device),
-			reinterpret_cast<void**>(m_device.GetAddressOf())));
-
-		HR(m_device->QueryInterface(__uuidof(IDCompositionDevice3), (LPVOID*)&dcompDevice3));
-
-		HR(dcompDevice3->CreateGaussianBlurEffect(blurEffect.GetAddressOf()));
-		HR(dcompDevice3->CreateSaturationEffect(saturationEffect.GetAddressOf()));
+			reinterpret_cast<void**>(m_device.ReleaseAndGetAddressOf())));
 
 		auto hWnd = m_pPreviewWnd->GetSafeHwnd();
 		HR(m_device->CreateTargetForHwnd(hWnd,
@@ -397,14 +428,6 @@ public:
 		HR(m_visual->SetContent(m_surface.Get()));
 		HR(m_target->SetRoot(m_visual.Get()));
 
-
-		saturationEffect->SetSaturation(2);
-		blurEffect->SetBorderMode(D2D1_BORDER_MODE_HARD);
-		blurEffect->SetInput(0, saturationEffect.Get(), 0);
-		blurEffect->SetStandardDeviation(1.f);
-		m_visual->SetEffect(blurEffect.Get());
-
-
 		ComPtr<ID2D1DeviceContext> dc;
 		HR(device2d->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
 			dc.GetAddressOf()));
@@ -415,10 +438,19 @@ public:
 			MONITOR_DEFAULTTONEAREST);
 		unsigned x = 0;
 		unsigned y = 0;
-		HR(GetDpiForMonitor(monitor,
-			MDT_EFFECTIVE_DPI,
-			&x,
-			&y));
+		if (procGetDpiForMonitor)
+		{
+			HR(procGetDpiForMonitor(monitor,
+				MDT_EFFECTIVE_DPI,
+				&x,
+				&y));
+		}
+		else
+		{
+			CClientDC dc(nullptr);
+			x = dc.GetDeviceCaps(LOGPIXELSX);
+			y = dc.GetDeviceCaps(LOGPIXELSY);
+		}
 		m_dpi.x = static_cast<float>(x);
 		m_dpi.y = static_cast<float>(y);
 		m_size.width = (rect.right - rect.left) * 96 / m_dpi.x;
@@ -426,8 +458,6 @@ public:
 	}
 
 	BOOL CanSupportAnimation() const override { return TRUE; }
-
-	//BOOL CanSupportDropSnap() const override { return TRUE; }
 
 	void StartSnapping(const CRect& rectOwner) override
 	{
@@ -585,11 +615,13 @@ private:
 	ComPtr<IDCompositionTarget>  m_target;
 	ComPtr<IDCompositionVisual2> m_visual;
 	ComPtr<IDCompositionSurface> m_surface;
-
-	ComPtr<IDCompositionDevice3> dcompDevice3;
-	ComPtr<IDCompositionGaussianBlurEffect> blurEffect;
-	ComPtr<IDCompositionSaturationEffect> saturationEffect;
 };
+
+PFN_D3D11_CREATE_DEVICE	CSnapAnimationImpDirectComposition::procD3D11CreateDevice = nullptr;
+ProcD2D1CreateDevice			CSnapAnimationImpDirectComposition::procD2D1CreateDevice = nullptr;
+ProcDCompositionCreateDevice2	CSnapAnimationImpDirectComposition::procDCompositionCreateDevice2 = nullptr;
+ProcGetDpiForMonitor	CSnapAnimationImpDirectComposition::procGetDpiForMonitor = nullptr;
+BOOL	CSnapAnimationImpDirectComposition::s_bApplicableCheck = (BOOL)-1;
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -652,16 +684,8 @@ void CSnapPreviewWnd::StopSnapping(bool bAbort)
 	if (m_animation)
 	{
 		m_animation->StopSnapping(bAbort);
-		if (ShouldDoAnimation() && m_animation->CanSupportDropSnap())
-		{
-			m_aniStage = AnimateStage::DropSnap;
-			ScheduleAnimation();
-		}
-		else
-		{
-			StopAnimation();
-			ShowWindow(SW_HIDE);
-		}
+		StopAnimation();
+		ShowWindow(SW_HIDE);
 	}
 }
 
@@ -828,7 +852,7 @@ void CSnapPreviewWnd::OnTimer(UINT_PTR nIDEvent)
 	std::chrono::duration<double> timeDiff = curTime - m_AniStartTime;
 	auto timeDiffCount = timeDiff.count();
 
-	constexpr double duration = 0.2;
+	constexpr double duration = 0.15;
 
 	if (m_aniStage == AnimateStage::Hiding)
 	{

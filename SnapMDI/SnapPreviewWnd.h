@@ -64,7 +64,6 @@ private:
 	{
 		Ready,
 		Showing,
-		DropSnap,
 		Hiding,
 	};
 	AnimateStage	m_aniStage = AnimateStage::Ready;
