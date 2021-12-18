@@ -685,13 +685,15 @@ void CSnapPreviewWnd::StopSnapping(bool bAbort)
 	if (m_animation)
 	{
 		m_animation->StopSnapping(bAbort);
-		StopAnimation();
-		ShowWindow(SW_HIDE);
+		m_aniStage = AnimateStage::Hiding;
+		FinishAnimationCleanup();
 	}
 }
 
 void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 {
+	m_rectTo = rect;
+	GetWindowInOwnerRect(m_rectTo);
 	if (ShouldDoAnimation())
 	{
 		ASSERT(!m_pActiveSnapWnd || m_pActiveSnapWnd == pActiveSnapWnd);
@@ -702,16 +704,14 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 		}
 		else
 		{
-			GetWindowInOwnerRect(pActiveSnapWnd, m_rectFrom);
+			GetWindowInOwnerRect(m_rectFrom, pActiveSnapWnd);
 			m_rectCur = m_rectFrom;
 		}
 		m_aniStage = AnimateStage::Showing;
-		m_rectTo = rect;
 		ScheduleAnimation();
 	}
 	else
 	{
-		m_rectTo = rect;
 		RepositionWindow(rect);
 	}
 }
@@ -751,24 +751,18 @@ void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
 		m_animation->OnAnimationTo(rect);
 	if (bFinish)
 	{
-		if (m_aniStage != AnimateStage::Showing)
-		{
-			ShowWindow(SW_HIDE);
-			m_pActiveSnapWnd = nullptr;
-			m_aniStage = AnimateStage::Ready;
-		}
+		FinishAnimationCleanup();
 	}
 }
 
-void CSnapPreviewWnd::GetWindowInOwnerRect(CWnd* pWnd, CRect& rect) const
+void CSnapPreviewWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) const
 {
-	pWnd->GetWindowRect(rect);
-	CRect rcOwner;
-	m_pWndOwner->GetWindowRect(rcOwner);
-	rect.left = std::max(rect.left, rcOwner.left);
-	rect.top = std::max(rect.top, rcOwner.top);
-	rect.right = std::min(rect.right, rcOwner.right);
-	rect.bottom = std::min(rect.bottom, rcOwner.bottom);
+	if (pWnd)
+		pWnd->GetWindowRect(rect);
+	rect.left = std::max(rect.left, m_rcOwner.left);
+	rect.top = std::max(rect.top, m_rcOwner.top);
+	rect.right = std::min(rect.right, m_rcOwner.right);
+	rect.bottom = std::min(rect.bottom, m_rcOwner.bottom);
 }
 
 void CSnapPreviewWnd::StopAnimation()
@@ -777,6 +771,17 @@ void CSnapPreviewWnd::StopAnimation()
 	{
 		KillTimer(m_nAniTimerID);
 		m_nAniTimerID = 0;
+	}
+}
+
+void CSnapPreviewWnd::FinishAnimationCleanup()
+{
+	StopAnimation();
+	if (m_aniStage != AnimateStage::Showing)
+	{
+		ShowWindow(SW_HIDE);
+		m_pActiveSnapWnd = nullptr;
+		m_aniStage = AnimateStage::Ready;
 	}
 }
 
@@ -859,7 +864,7 @@ void CSnapPreviewWnd::OnTimer(UINT_PTR nIDEvent)
 
 	if (m_aniStage == AnimateStage::Hiding)
 	{
-		GetWindowInOwnerRect(m_pActiveSnapWnd, m_rectTo);
+		GetWindowInOwnerRect(m_rectTo, m_pActiveSnapWnd);
 	}
 
 	CRect rect;
@@ -877,8 +882,6 @@ void CSnapPreviewWnd::OnTimer(UINT_PTR nIDEvent)
 		rect.bottom = CalcSmoothPos(dPos, m_rectFrom.bottom, m_rectTo.bottom);
 	}
 	OnAnimationTo(rect, bFinish);
-	if (bFinish)
-		StopAnimation();
 }
 
 void CSnapPreviewWnd::OnDestroy()

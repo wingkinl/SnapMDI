@@ -41,9 +41,10 @@ public:
 private:
 	void OnAnimationTo(const CRect& rect, bool bFinish);
 
-	void GetWindowInOwnerRect(CWnd* pWnd, CRect& rect) const;
-
+	void GetWindowInOwnerRect(CRect& rect, CWnd* pWnd = nullptr) const;
 	void StopAnimation();
+
+	void FinishAnimationCleanup();
 
 	void ScheduleAnimation();
 

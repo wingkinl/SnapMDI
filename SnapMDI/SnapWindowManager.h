@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 class CSnapPreviewWnd;
 class CSnapWindowHelper;
@@ -44,6 +45,26 @@ protected:
 
 	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
 
+	struct ChildWndInfo
+	{
+		HWND	hWndChild;
+		RECT	rect;
+		BYTE	states;
+		HWND	hWndSiblingLeft;
+		HWND	hWndSiblingTop;
+		HWND	hWndSiblingRight;
+		HWND	hWndSiblingBottom;
+
+		enum class StateFlag : BYTE
+		{
+			BorderWithOwnerLeft		= 0x01,
+			BorderWithOwnerTop		= 0x02,
+			BorderWithOwnerRight	= 0x04,
+			BorderWithOwnerBottom	= 0x08,
+			BorderWithSibling		= 0x10,
+		};
+	};
+
 	enum class SnapGridType : DWORD
 	{
 		SnapTargetMask	= 0x000000ff,
@@ -67,6 +88,8 @@ protected:
 	virtual SnapGridInfo GetSnapOwnerGridInfo(CPoint pt) const;
 
 	virtual SnapGridInfo GetSnapChildGridInfo(CPoint pt) const;
+
+	virtual SnapGridInfo GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const;
 private:
 	void PreSnapInitialize();
 protected:
@@ -82,6 +105,8 @@ protected:
 	BOOL				m_bIsMoving = FALSE;
 	SnapTargetType		m_snapTarget = SnapTargetType::None;
 	SnapGridInfo		m_curGrid = {0};
+
+	std::vector<ChildWndInfo>	m_vChildRects;
 };
 
 
