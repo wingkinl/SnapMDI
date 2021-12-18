@@ -14,8 +14,6 @@ struct SnapWndMsg
 	LRESULT* pResult;
 };
 
-enum class SnapGridType : DWORD;
-
 class CSnapWindowManager
 {
 public:
@@ -24,11 +22,9 @@ public:
 public:
 	void InitSnap(CWnd* pWndOwner);
 protected:
-	BOOL OnWndMsg(SnapWndMsg& msg);
+	BOOL OnWndMsg(const SnapWndMsg& msg);
 
 	CSnapPreviewWnd* GetSnapPreview();
-
-	void Initialize();
 
 	void StartMoving(CSnapWindowHelper* pWndHelper);
 
@@ -36,23 +32,56 @@ protected:
 
 	void OnMoving(CPoint pt);
 
+	virtual BOOL EnterSnapping(const SnapWndMsg& msg) const;
+
+	enum class SnapTargetType : BYTE
+	{
+		None	= 0x00,
+		Owner	= 0x01,
+		Child	= 0x02,
+		Custom	= 0x04,
+	};
+
+	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
+
+	enum class SnapGridType : DWORD
+	{
+		SnapTargetMask	= 0x000000ff,
+		Left			= 0x00000100,
+		Right			= 0x00000200,
+		Top				= 0x00000400,
+		Bottom			= 0x00000800,
+		TopLeft			= Top|Left,
+		TopRight		= Top|Right,
+		BottomLeft		= Bottom|Left,
+		BottomRight		= Bottom|Right,
+	};
+
 	struct SnapGridInfo
 	{
-		SnapGridType	type;
-		CRect			rect;
+		DWORD	type;
+		CRect	rect;
 	};
-	SnapGridInfo GetSnapGridInfo(CPoint pt) const;
+	virtual SnapGridInfo GetSnapGridInfo(CPoint pt) const;
+
+	virtual SnapGridInfo GetSnapOwnerGridInfo(CPoint pt) const;
+
+	virtual SnapGridInfo GetSnapChildGridInfo(CPoint pt) const;
+private:
+	void PreSnapInitialize();
 protected:
 	friend class CSnapWindowHelper;
 
-	CWnd* m_pWndOwner = nullptr;
+	CWnd*	m_pWndOwner = nullptr;
+	CRect	m_rcOwner;
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	POINT				m_ptStart = { 0 };
 	BOOL				m_bEnterSizeMove = FALSE;
 	BOOL				m_bIsMoving = FALSE;
-	SnapGridType		m_nCurGridType;
+	SnapTargetType		m_snapTarget = SnapTargetType::None;
+	SnapGridInfo		m_curGrid = {0};
 };
 
 
@@ -73,7 +102,7 @@ public:
 		return m_pWnd;
 	}
 
-	inline BOOL OnWndMsg(SnapWndMsg& msg)
+	inline BOOL OnWndMsg(const SnapWndMsg& msg)
 	{
 		return m_pManager->OnWndMsg(msg);
 	}

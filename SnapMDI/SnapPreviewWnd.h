@@ -38,8 +38,6 @@ public:
 	inline DWORD GetConfigFlags() const { return m_nConfigs; }
 
 	void RepositionWindow(const CRect& rect);
-
-	CRect	m_rcOwner;
 private:
 	void OnAnimationTo(const CRect& rect, bool bFinish);
 
@@ -58,6 +56,7 @@ private:
 private:
 	CWnd*	m_pWndOwner = nullptr;
 	CWnd*	m_pActiveSnapWnd = nullptr;
+	CRect	m_rcOwner;
 	DWORD	m_nConfigs = 0;
 
 	enum class AnimateStage

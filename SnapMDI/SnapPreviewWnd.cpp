@@ -672,7 +672,8 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 void CSnapPreviewWnd::StartSnapping()
 {
 	ASSERT(m_pWndOwner && !IsWindowVisible());
-	m_pWndOwner->GetWindowRect(&m_rcOwner);
+	m_pWndOwner->GetClientRect(&m_rcOwner);
+	m_pWndOwner->ClientToScreen(&m_rcOwner);
 	if (m_animation)
 	{
 		m_animation->StartSnapping(m_rcOwner);
@@ -717,6 +718,8 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 
 void CSnapPreviewWnd::Hide()
 {
+	if (!IsWindowVisible())
+		return;
 	if (ShouldDoAnimation())
 	{
 		m_aniStage = AnimateStage::Hiding;
