@@ -118,20 +118,24 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 		return;
 	m_wndSnapPreview->StopSnapping(bAbort);
 
-	if (!bAbort && m_curGrid.type)
+	if (!bAbort && m_curGrid.type != SnapGridType::None)
 	{
-		CRect rect;
-		m_wndSnapPreview->GetSnapRect(rect);
-		UINT nFlags = SWP_FRAMECHANGED;
-		CWnd* pWnd = m_pCurSnapWnd->GetWnd();
-		ASSERT(pWnd->GetParent() == m_pWndOwner);
-		m_pWndOwner->ScreenToClient(rect);
-		pWnd->SetWindowPos(nullptr, rect.left, rect.top, rect.Width(), rect.Height(), nFlags);
+		OnFinshSnapping();
 	}
 
 	m_pCurSnapWnd = nullptr;
-	m_curGrid = { 0 };
+	m_curGrid = { SnapGridType::None };
 	m_vChildRects.clear();
+}
+
+void CSnapWindowManager::OnFinshSnapping()
+{
+	CRect rectSnap = m_curGrid.rect;
+	UINT nFlags = SWP_FRAMECHANGED;
+	CWnd* pWnd = m_pCurSnapWnd->GetWnd();
+	ASSERT(pWnd->GetParent() == m_pWndOwner);
+	m_pWndOwner->ScreenToClient(rectSnap);
+	pWnd->SetWindowPos(nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
 }
 
 void CSnapWindowManager::OnMoving(CPoint pt)
@@ -142,7 +146,7 @@ void CSnapWindowManager::OnMoving(CPoint pt)
 	if (m_curGrid.type != grid.type || !m_curGrid.rect.EqualRect(&grid.rect))
 	{
 		m_curGrid = grid;
-		switch ((SnapTargetType)(m_curGrid.type & (DWORD)SnapGridType::SnapTargetMask))
+		switch ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask))
 		{
 		case SnapTargetType::None:
 			m_wndSnapPreview->Hide();
@@ -213,58 +217,61 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 	if ((BYTE)m_snapTarget & (BYTE)SnapTargetType::Child)
 	{
 		auto grid = GetSnapChildGridInfo(pt);
-		if (grid.type)
+		if (grid.type != SnapGridType::None)
 			return grid;
 	}
 	if ((BYTE)m_snapTarget & (BYTE)SnapTargetType::Owner)
 	{
 		return GetSnapOwnerGridInfo(pt);
 	}
-	return { (DWORD)SnapTargetType::None };
+	return { SnapGridType::None };
 }
 
 auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 {
-	SnapGridInfo grid = { (DWORD)SnapTargetType::None, m_rcOwner };
+	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
 	szGrid.cy /= 2;
 	if (pt.x < grid.rect.left + s_nHotRgnSize)
 	{
-		grid.type = (DWORD)SnapGridType::Left;
+		grid.type = SnapGridType::Left;
 		grid.rect.right = grid.rect.left + szGrid.cx;
 	}
 	else if (pt.x > grid.rect.right - s_nHotRgnSize)
 	{
-		grid.type = (DWORD)SnapGridType::Right;
+		grid.type = SnapGridType::Right;
 		grid.rect.left = grid.rect.right - szGrid.cx;
 	}
 	if (pt.y < grid.rect.top + s_nHotRgnSize)
 	{
-		grid.type = (grid.type | (DWORD)SnapGridType::Top);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Top);
 		grid.rect.bottom = grid.rect.top + szGrid.cy;
 	}
 	else if (pt.y > grid.rect.bottom - s_nHotRgnSize)
 	{
-		grid.type = ((DWORD)grid.type | (DWORD)SnapGridType::Bottom);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Bottom);
 		grid.rect.top = grid.rect.bottom - szGrid.cy;
 	}
-	if (grid.type)
+	if (grid.type != SnapGridType::None)
 	{
-		grid.type = ((DWORD)grid.type | (DWORD)SnapTargetType::Owner);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Owner);
 	}
 	return grid;
 }
 
 auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 {
-	SnapGridInfo grid = { (DWORD)SnapTargetType::None, m_rcOwner };
-	for (auto& wnd : m_vChildRects)
+	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
+	if (GetKeyState(VK_SHIFT) < 0)
 	{
-		if (wnd.states & (BYTE)ChildWndInfo::StateFlag::BorderWithSibling)
+		for (auto& wnd : m_vChildRects)
 		{
-			if (PtInRect(&wnd.rect, pt))
-				return GetSnapChildGridInfoEx(pt, wnd);
+			if (wnd.states & (BYTE)ChildWndInfo::StateFlag::BorderWithSibling)
+			{
+				if (PtInRect(&wnd.rect, pt))
+					return GetSnapChildGridInfoEx(pt, wnd);
+			}
 		}
 	}
 	return grid;
@@ -272,7 +279,7 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 
 auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const -> SnapGridInfo
 {
-	SnapGridInfo grid = { (DWORD)SnapTargetType::Child, m_rcOwner };
+	SnapGridInfo grid = { (SnapGridType)SnapTargetType::Child, m_rcOwner };
 	grid.rect = childInfo.rect;
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
@@ -281,21 +288,21 @@ auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& c
 	if (pt.x < grid.rect.left + halfGridCx)
 	{
 		grid.rect.right = grid.rect.left + szGrid.cx;
-		grid.type = ((DWORD)grid.type | (DWORD)SnapGridType::Left);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Left);
 	}
 	else if (pt.x > grid.rect.right - halfGridCx)
 	{
 		grid.rect.left = grid.rect.right - szGrid.cx;
-		grid.type = ((DWORD)grid.type | (DWORD)SnapGridType::Right);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Right);
 	}
 	else if (pt.y < grid.rect.top + szGrid.cy)
 	{
-		grid.type = (grid.type | (DWORD)SnapGridType::Top);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Top);
 		grid.rect.bottom = grid.rect.top + szGrid.cy;
 	}
 	else
 	{
-		grid.type = ((DWORD)grid.type | (DWORD)SnapGridType::Bottom);
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Bottom);
 		grid.rect.top = grid.rect.bottom - szGrid.cy;
 	}
 	return grid;

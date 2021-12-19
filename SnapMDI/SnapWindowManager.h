@@ -43,7 +43,16 @@ protected:
 		Custom	= 0x04,
 	};
 
+	enum
+	{
+		// separate the mask here instead of putting it above so that
+		// VS can show the combination in debug
+		SnapTargetMask = 0x0f,
+	};
+
 	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
+
+	virtual void OnFinshSnapping();
 
 	struct ChildWndInfo
 	{
@@ -67,21 +76,20 @@ protected:
 
 	enum class SnapGridType : DWORD
 	{
-		SnapTargetMask	= 0x000000ff,
+		None			= (DWORD)SnapTargetType::None,
+		Owner			= (DWORD)SnapTargetType::Owner,
+		Child			= (DWORD)SnapTargetType::Child,
+		Custom			= (DWORD)SnapTargetType::Custom,
 		Left			= 0x00000100,
 		Right			= 0x00000200,
 		Top				= 0x00000400,
 		Bottom			= 0x00000800,
-		TopLeft			= Top|Left,
-		TopRight		= Top|Right,
-		BottomLeft		= Bottom|Left,
-		BottomRight		= Bottom|Right,
 	};
 
 	struct SnapGridInfo
 	{
-		DWORD	type;
-		CRect	rect;
+		SnapGridType	type;
+		CRect			rect;
 	};
 	virtual SnapGridInfo GetSnapGridInfo(CPoint pt) const;
 
@@ -104,7 +112,7 @@ protected:
 	BOOL				m_bEnterSizeMove = FALSE;
 	BOOL				m_bIsMoving = FALSE;
 	SnapTargetType		m_snapTarget = SnapTargetType::None;
-	SnapGridInfo		m_curGrid = {0};
+	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
 	std::vector<ChildWndInfo>	m_vChildRects;
 };

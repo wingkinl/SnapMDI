@@ -732,11 +732,6 @@ void CSnapPreviewWnd::Hide()
 	}
 }
 
-void CSnapPreviewWnd::GetSnapRect(CRect& rect) const
-{
-	rect = m_rectTo;
-}
-
 void CSnapPreviewWnd::RepositionWindow(const CRect& rect)
 {
 	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),

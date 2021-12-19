@@ -33,8 +33,6 @@ public:
 	void ShowAt(CWnd* pActiveSnapWnd, const CRect& rect);
 	void Hide();
 
-	void GetSnapRect(CRect& rect) const;
-
 	inline DWORD GetConfigFlags() const { return m_nConfigs; }
 
 	void RepositionWindow(const CRect& rect);
