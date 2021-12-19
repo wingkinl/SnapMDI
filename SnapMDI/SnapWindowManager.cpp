@@ -2,6 +2,9 @@
 #include "framework.h"
 #include "SnapWindowManager.h"
 #include "SnapPreviewWnd.h"
+#include <algorithm>
+#undef min
+#undef max
 
 static int s_nHotRgnSize = -1;
 
@@ -94,6 +97,15 @@ void CSnapWindowManager::PreSnapInitialize()
 	{
 		s_nHotRgnSize = GetSystemMetrics(SM_CYCAPTION);
 	}
+	m_curSnapWndMinMax.ptMinTrackSize.x = GetSystemMetrics(SM_CXMINTRACK);
+	m_curSnapWndMinMax.ptMinTrackSize.y = GetSystemMetrics(SM_CYMINTRACK);
+	m_curSnapWndMinMax.ptMaxTrackSize.x = GetSystemMetrics(SM_CXMAXTRACK);
+	m_curSnapWndMinMax.ptMaxTrackSize.y = GetSystemMetrics(SM_CYMAXTRACK);
+
+	m_pCurSnapWnd->GetWnd()->SendMessage(WM_GETMINMAXINFO, 0, (LPARAM)&m_curSnapWndMinMax);
+
+	ASSERT(m_curSnapWndMinMax.ptMinTrackSize.x <= m_curSnapWndMinMax.ptMaxTrackSize.x);
+	ASSERT(m_curSnapWndMinMax.ptMinTrackSize.y <= m_curSnapWndMinMax.ptMaxTrackSize.y);
 }
 
 void CSnapWindowManager::StartMoving(CSnapWindowHelper* pWndHelper)
@@ -120,7 +132,8 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 
 	if (!bAbort && m_curGrid.type != SnapGridType::None)
 	{
-		OnFinshSnapping();
+		if (OnSnapTo())
+			OnAfterSnap();
 	}
 
 	m_pCurSnapWnd = nullptr;
@@ -128,14 +141,86 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 	m_vChildRects.clear();
 }
 
-void CSnapWindowManager::OnFinshSnapping()
+BOOL CSnapWindowManager::OnSnapTo()
 {
 	CRect rectSnap = m_curGrid.rect;
 	UINT nFlags = SWP_FRAMECHANGED;
 	CWnd* pWnd = m_pCurSnapWnd->GetWnd();
 	ASSERT(pWnd->GetParent() == m_pWndOwner);
-	m_pWndOwner->ScreenToClient(rectSnap);
+	m_pWndOwner->ScreenToClient(&rectSnap);
 	pWnd->SetWindowPos(nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
+	return TRUE;
+}
+
+void CSnapWindowManager::OnAfterSnap()
+{
+	switch ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask))
+	{
+	case SnapTargetType::Owner:
+		OnAfterSnapToOwner();
+		break;
+	case SnapTargetType::Child:
+		OnAfterSnapToChild();
+		break;
+	case SnapTargetType::Custom:
+		OnAfterSnapToCustom();
+		break;
+	}
+}
+
+void CSnapWindowManager::OnAfterSnapToOwner()
+{
+	if (m_vChildRects.empty())
+		return;
+
+	CDC* pDC = m_pWndOwner->GetDC();
+
+	CDC memDC;
+	memDC.CreateCompatibleDC(pDC);
+
+	m_pWndOwner->ReleaseDC(pDC);
+
+	for (auto& wnd : m_vChildRects)
+	{
+		LPBYTE lpBits = NULL;
+		auto& rect = (CRect&)wnd.rect;
+		HBITMAP hBmp = CDrawingManager::CreateBitmap_32(rect.Size(), (LPVOID*)&lpBits);
+		if (hBmp == NULL)
+		{
+			return;
+		}
+		SendMessage(wnd.hWndChild, WM_PRINT, (WPARAM)memDC.GetSafeHdc(), (LPARAM)(PRF_CLIENT | PRF_ERASEBKGND | PRF_CHILDREN | PRF_NONCLIENT));
+		//pWndChild->PrintWindow(&memDC, 0);
+	}
+}
+
+void CSnapWindowManager::OnAfterSnapToChild()
+{
+	ASSERT(!m_vChildRects.empty());
+	CRect rectSnap = m_curGrid.childInfo->rect;
+	switch ((SnapGridType)((DWORD)m_curGrid.type & SnapGridSideMask))
+	{
+	case SnapGridType::Left:
+		rectSnap.left = m_curGrid.rect.right;
+		break;
+	case SnapGridType::Top:
+		rectSnap.top = m_curGrid.rect.bottom;
+		break;
+	case SnapGridType::Right:
+		rectSnap.right = m_curGrid.rect.left;
+		break;
+	case SnapGridType::Bottom:
+		rectSnap.bottom = m_curGrid.rect.top;
+		break;
+	}
+	UINT nFlags = SWP_FRAMECHANGED|SWP_NOZORDER|SWP_NOACTIVATE;
+	m_pWndOwner->ScreenToClient(&rectSnap);
+	SetWindowPos(m_curGrid.childInfo->hWndChild, nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
+}
+
+void CSnapWindowManager::OnAfterSnapToCustom()
+{
+
 }
 
 void CSnapWindowManager::OnMoving(CPoint pt)
@@ -233,6 +318,10 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
 	szGrid.cy /= 2;
+	szGrid.cx = std::min(m_curSnapWndMinMax.ptMaxTrackSize.x, szGrid.cx);
+	szGrid.cx = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, szGrid.cx);
+	szGrid.cy = std::min(m_curSnapWndMinMax.ptMaxTrackSize.y, szGrid.cy);
+	szGrid.cy = std::max(m_curSnapWndMinMax.ptMinTrackSize.y, szGrid.cy);
 	if (pt.x < grid.rect.left + s_nHotRgnSize)
 	{
 		grid.type = SnapGridType::Left;
@@ -279,31 +368,38 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 
 auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const -> SnapGridInfo
 {
-	SnapGridInfo grid = { (SnapGridType)SnapTargetType::Child, m_rcOwner };
+	SnapGridInfo grid = { (SnapGridType)SnapTargetType::None, m_rcOwner };
 	grid.rect = childInfo.rect;
+	grid.childInfo = &childInfo;
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
 	szGrid.cy /= 2;
+	szGrid.cx = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, szGrid.cx);
+	szGrid.cy = std::max(m_curSnapWndMinMax.ptMinTrackSize.y, szGrid.cy);
 	auto halfGridCx = szGrid.cx / 2;
 	if (pt.x < grid.rect.left + halfGridCx)
 	{
+		grid.type = SnapGridType::Left;
 		grid.rect.right = grid.rect.left + szGrid.cx;
-		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Left);
 	}
 	else if (pt.x > grid.rect.right - halfGridCx)
 	{
+		grid.type = SnapGridType::Right;
 		grid.rect.left = grid.rect.right - szGrid.cx;
-		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Right);
 	}
 	else if (pt.y < grid.rect.top + szGrid.cy)
 	{
-		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Top);
+		grid.type = SnapGridType::Top;
 		grid.rect.bottom = grid.rect.top + szGrid.cy;
 	}
 	else
 	{
-		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Bottom);
+		grid.type = SnapGridType::Bottom;
 		grid.rect.top = grid.rect.bottom - szGrid.cy;
+	}
+	if (grid.type != SnapGridType::None)
+	{
+		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Child);
 	}
 	return grid;
 }

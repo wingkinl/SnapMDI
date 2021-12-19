@@ -52,7 +52,15 @@ protected:
 
 	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
 
-	virtual void OnFinshSnapping();
+	virtual BOOL OnSnapTo();
+
+	virtual void OnAfterSnap();
+
+	virtual void OnAfterSnapToOwner();
+
+	virtual void OnAfterSnapToChild();
+
+	virtual void OnAfterSnapToCustom();
 
 	struct ChildWndInfo
 	{
@@ -86,10 +94,18 @@ protected:
 		Bottom			= 0x00000800,
 	};
 
+	enum
+	{
+		// separate the mask here instead of putting it above so that
+		// VS can show the combination in debug
+		SnapGridSideMask = 0x00000f00,
+	};
+
 	struct SnapGridInfo
 	{
 		SnapGridType	type;
 		CRect			rect;
+		const ChildWndInfo*	childInfo;
 	};
 	virtual SnapGridInfo GetSnapGridInfo(CPoint pt) const;
 
@@ -108,6 +124,7 @@ protected:
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
+	MINMAXINFO			m_curSnapWndMinMax = { 0 };
 	POINT				m_ptStart = { 0 };
 	BOOL				m_bEnterSizeMove = FALSE;
 	BOOL				m_bIsMoving = FALSE;
