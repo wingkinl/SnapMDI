@@ -33,7 +33,7 @@ public:
 protected:
 	CSnapWindowHelper	m_snapHelper;
 
-	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
+	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
 // Generated message map functions
 protected:

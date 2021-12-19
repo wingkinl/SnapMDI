@@ -25,7 +25,7 @@ void CSnapWindowManager::InitSnap(CWnd* pWndOwner)
 	m_pWndOwner = pWndOwner;
 }
 
-BOOL CSnapWindowManager::OnWndMsg(const SnapWndMsg& msg)
+SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 {
 	switch (msg.message)
 	{
@@ -77,8 +77,20 @@ BOOL CSnapWindowManager::OnWndMsg(const SnapWndMsg& msg)
 			OnMoving(ptCurrent);
 		}
 		break;
+	case WM_NCHITTEST:
+		return SnapWndMsg::HandleResult::NeedPostWndMsg;
 	}
-	return FALSE;
+	return SnapWndMsg::HandleResult::Continue;
+}
+
+LRESULT CSnapWindowManager::PostWndMsg(SnapWndMsg& msg)
+{
+	switch (msg.message)
+	{
+	case WM_NCHITTEST:
+		break;
+	}
+	return msg.result;
 }
 
 CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()

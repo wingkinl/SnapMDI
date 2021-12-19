@@ -12,7 +12,14 @@ struct SnapWndMsg
 	UINT message;
 	WPARAM wp;
 	LPARAM lp;
-	LRESULT* pResult;
+	LRESULT result;
+
+	enum class HandleResult
+	{
+		Continue,
+		Handled,
+		NeedPostWndMsg,
+	};
 };
 
 class CSnapWindowManager
@@ -23,7 +30,9 @@ public:
 public:
 	void InitSnap(CWnd* pWndOwner);
 protected:
-	BOOL OnWndMsg(const SnapWndMsg& msg);
+	SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg);
+
+	LRESULT PostWndMsg(SnapWndMsg& msg);
 
 	CSnapPreviewWnd* GetSnapPreview();
 
@@ -152,9 +161,13 @@ public:
 		return m_pWnd;
 	}
 
-	inline BOOL OnWndMsg(const SnapWndMsg& msg)
+	inline SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg)
 	{
-		return m_pManager->OnWndMsg(msg);
+		return m_pManager->PreWndMsg(msg);
+	}
+	inline LRESULT PostWndMsg(SnapWndMsg& msg)
+	{
+		return m_pManager->PostWndMsg(msg);
 	}
 protected:
 	CSnapWindowManager* m_pManager = nullptr;
