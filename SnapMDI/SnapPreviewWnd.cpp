@@ -33,7 +33,7 @@ public:
 
 	void OnAnimationTo(CRect rect)
 	{
-		if (IsAnimateByMovingWnd())
+		if (m_pPreviewWnd->IsAnimateByMovingWnd())
 			m_pPreviewWnd->RepositionWindow(rect);
 		else
 			OnAnimationToUpdate(rect);
@@ -49,13 +49,6 @@ public:
 	virtual BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) = 0;
 protected:
 	virtual void OnAnimationToUpdate(CRect rect) {}
-
-	inline bool IsAnimateByMovingWnd() const
-	{
-		if (m_pPreviewWnd->GetConfigFlags() & CSnapPreviewWnd::AnimateByMovingWnd)
-			return true;
-		return false;
-	}
 protected:
 	friend class CSnapPreviewWnd;
 	CSnapPreviewWnd* m_pPreviewWnd = nullptr;
@@ -126,7 +119,7 @@ public:
 
 		if (bOK)
 		{
-			if (IsAnimateByMovingWnd())
+			if (m_pPreviewWnd->IsAnimateByMovingWnd())
 				m_pPreviewWnd->SetLayeredWindowAttributes(0, 128, LWA_ALPHA);
 			else
 			{
@@ -142,7 +135,7 @@ public:
 
 	void StartSnapping(const CRect& rectOwner) override
 	{
-		if (IsAnimateByMovingWnd())
+		if (m_pPreviewWnd->IsAnimateByMovingWnd())
 		{
 			__super::StartSnapping(rectOwner);
 		}
@@ -461,7 +454,7 @@ public:
 
 	void StartSnapping(const CRect& rectOwner) override
 	{
-		if (IsAnimateByMovingWnd())
+		if (m_pPreviewWnd->IsAnimateByMovingWnd())
 		{
 			__super::StartSnapping(rectOwner);
 		}
@@ -519,7 +512,7 @@ public:
 
 			dc->Clear();
 			D2D_RECT_F rect;
-			if (IsAnimateByMovingWnd())
+			if (m_pPreviewWnd->IsAnimateByMovingWnd())
 			{
 				rect = D2D_RECT_F{0, 0, m_size.width, m_size.height };
 			}
@@ -625,9 +618,9 @@ BOOL	CSnapAnimationImpDirectComposition::s_bApplicableCheck = (BOOL)-1;
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-CSnapPreviewWnd::CSnapPreviewWnd(DWORD nConfigFlags)
+CSnapPreviewWnd::CSnapPreviewWnd()
 {
-	m_nConfigs = nConfigFlags;
+	
 }
 
 CSnapPreviewWnd::~CSnapPreviewWnd()
@@ -639,28 +632,26 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 	ASSERT_VALID(pWndOwner);
 	m_pWndOwner = pWndOwner;
 
-	switch (GetAnimationTech())
+	switch (m_tech)
 	{
-	case AnimationTechDC:
+	case RenderTech::DirectComposition:
 		if (CSnapAnimationImpDirectComposition::IsApplicable())
 		{
 			m_animation = std::make_unique<CSnapAnimationImpDirectComposition>();
 			break;
 		}
 		// fall through
-	case AnimationTechAlpha:
+	case RenderTech::AlphaBlendedLayer:
 		if (GetGlobalData()->m_nBitsPerPixel > 8)
 		{
-			m_nFlags &= ~AnimationTechMask;
-			m_nFlags |= AnimationTechAlpha;
+			m_tech = RenderTech::AlphaBlendedLayer;
 			m_animation = std::make_unique<CSnapAnimationImpAlpha>();
 			break;
 		}
-	case AnimationTechInvert:
+	case RenderTech::InvertColor:
 	default:
 		// fall through
-		m_nFlags &= ~AnimationTechMask;
-		m_nFlags |= AnimationTechInvert;
+		m_tech = RenderTech::InvertColor;
 		m_animation = std::make_unique<CSnapAnimationImpInvert>();
 		break;
 	}
@@ -790,14 +781,9 @@ void CSnapPreviewWnd::ScheduleAnimation()
 	m_nAniTimerID = SetTimer(100, AnimationInterval, nullptr);
 }
 
-DWORD CSnapPreviewWnd::GetAnimationTech() const
-{
-	return (m_nConfigs & AnimationTechMask);
-}
-
 bool CSnapPreviewWnd::ShouldDoAnimation() const
 {
-	if (m_nConfigs & ConfigFlag::DisableAnimation)
+	if (!m_bEnableAnimation)
 		return false;
 	if (!m_animation)
 		return false;

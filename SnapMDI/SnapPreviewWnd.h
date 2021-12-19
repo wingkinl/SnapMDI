@@ -8,23 +8,29 @@ class CSnapAnimationImp;
 class CSnapPreviewWnd : public CWnd
 {
 public:
-	enum ConfigFlag : DWORD
-	{
-		AnimationTechMask		= 0x00000003,
-		// Direct Composition, fall back to layered if not supported
-		AnimationTechDC			= 0x00000000,
-		// Alpha blended layered window
-		AnimationTechAlpha		= 0x00000001,
-		// Invert the color of the area
-		AnimationTechInvert		= 0x00000002,
-		// Animation implemented by moving this window
-		AnimateByMovingWnd		= 0x00000010,
-		DisableAnimation		= 0x00000020,
-	};
-
-	CSnapPreviewWnd(DWORD nConfigFlags = 0);
+	CSnapPreviewWnd();
 
 	void Create(CWnd* pWndOwner);
+
+	enum class RenderTech
+	{
+		// Direct Composition, fall back to layered if not supported
+		DirectComposition,
+		// Alpha blended layered window
+		AlphaBlendedLayer,
+		// Invert the color of the area
+		InvertColor,
+		Normal,
+	};
+
+	inline RenderTech GetRenderTech() const { return m_tech; }
+	void SetPreferedRenderTech(RenderTech tech) { m_tech = tech; }
+
+	inline bool IsAnimationEnabled() const { return m_bEnableAnimation; }
+	void EnableAnimation(bool val) { m_bEnableAnimation = val; }
+
+	inline bool IsAnimateByMovingWnd() const { return m_bAnimateByMovingWnd; }
+	void SetAnimateByMovingWnd(bool val) { m_bAnimateByMovingWnd = val; }
 
 	void StartSnapping();
 	void StopSnapping(bool bAbort);
@@ -32,8 +38,6 @@ public:
 	// rect in screen coordinates
 	void ShowAt(CWnd* pActiveSnapWnd, const CRect& rect);
 	void Hide();
-
-	inline DWORD GetConfigFlags() const { return m_nConfigs; }
 
 	void RepositionWindow(const CRect& rect);
 private:
@@ -46,8 +50,6 @@ private:
 
 	void ScheduleAnimation();
 
-	DWORD GetAnimationTech() const;
-
 	bool ShouldDoAnimation() const;
 
 	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
@@ -56,7 +58,9 @@ private:
 	CWnd*	m_pWndOwner = nullptr;
 	CWnd*	m_pActiveSnapWnd = nullptr;
 	CRect	m_rcOwner;
-	DWORD	m_nConfigs = 0;
+	RenderTech	m_tech = RenderTech::DirectComposition;
+	bool		m_bEnableAnimation = true;
+	bool		m_bAnimateByMovingWnd = false;
 
 	enum class AnimateStage
 	{
