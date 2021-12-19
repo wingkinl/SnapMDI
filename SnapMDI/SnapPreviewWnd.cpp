@@ -1,184 +1,116 @@
 #include "pch.h"
 #include "framework.h"
 #include "SnapPreviewWnd.h"
-#include <algorithm>
-#include <VersionHelpers.h>
+#include "ALAWndRenderImpEx.h"
 
-#include <gdiplus.h>
-using namespace Gdiplus;
-
-#include <wrl.h>
-#include <d3d11_2.h>
-#include <d2d1_2.h>
-#include <d2d1_2helper.h>
-#include <dcomp.h>
-#include <ShellScalingApi.h>
-#include <d2d1_1.h>
-
-using namespace Microsoft::WRL;
-using namespace D2D1;
-
-#undef min
-#undef max
-
-class CSnapAnimationImp
+class CSnapPreviewRenderImpDirectComposition : public CALAWndRenderImpDirectComposition
 {
 public:
-	CSnapAnimationImp() = default;
-	virtual ~CSnapAnimationImp() = default;
-
-	virtual BOOL Create(CWnd* pWndOwner) = 0;
-
-	virtual BOOL CanSupportAnimation() const { return FALSE; }
-
-	void OnAnimationTo(CRect rect)
+	void CreateDeviceResourcesEx(ID2D1DeviceContext* pDC) override
 	{
-		if (m_pPreviewWnd->IsAnimateByMovingWnd())
-			m_pPreviewWnd->RepositionWindow(rect);
-		else
-			OnAnimationToUpdate(rect);
+		D2D_COLOR_F const color = { 0.26f, 0.56f, 0.87f, 0.5f };
+		HR(pDC->CreateSolidColorBrush(color,
+			m_brush.ReleaseAndGetAddressOf()));
 	}
 
-	virtual void StartSnapping(const CRect& rectOwner) {}
-
-	virtual void StopSnapping(bool bAbort)
+	void OnAnimationUpdateRendering() override
 	{
-		//
+		m_rect = ((CSnapPreviewWnd*)m_pALAWnd)->GetCurRect();
+		m_pALAWnd->ScreenToClient(&m_rect);
+
+		m_pALAWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
+			SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
+		m_pALAWnd->RedrawWindow();
 	}
 
-	virtual BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) = 0;
-protected:
-	virtual void OnAnimationToUpdate(CRect rect) {}
-protected:
-	friend class CSnapPreviewWnd;
-	CSnapPreviewWnd* m_pPreviewWnd = nullptr;
-};
-
-class CSnapAnimationImpInvert : public CSnapAnimationImp
-{
-public:
-	BOOL Create(CWnd* pWndOwner) override
+	void HandlePaint() override
 	{
-		CRect rect;
-		rect.SetRectEmpty();
-
-		DWORD dwStyle = WS_POPUP;
-		DWORD dwExStyle = 0;
-		UINT nClassStyle = CS_HREDRAW | CS_VREDRAW;
-		return m_pPreviewWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
-	}
-
-	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override
-	{
-		switch (message)
+		try
 		{
-		case WM_PAINT:
-			HandlePaint();
-			break;
-		}
-		return FALSE;
-	}
-private:
-	void HandlePaint()
-	{
-		CPaintDC dc(m_pPreviewWnd);
+			CreateDeviceResources();
 
-		CRect rect;
-		m_pPreviewWnd->GetClientRect(rect);
+			ComPtr<ID2D1DeviceContext> dc;
+			POINT offset = {};
+			HR(m_surface->BeginDraw(nullptr, // Entire surface
+				__uuidof(dc),
+				reinterpret_cast<void**>(dc.GetAddressOf()),
+				&offset));
 
-		COLORREF colorFill = RGB(47, 103, 190);
+			dc->SetDpi(m_dpi.x, m_dpi.y);
 
-		CBrush brFill(CDrawingManager::PixelAlpha(RGB(255 - GetRValue(colorFill), 255 - GetGValue(colorFill), 255 - GetBValue(colorFill)), 50));
+			dc->SetTransform(Matrix3x2F::Translation(DPtoLP(offset.x, m_dpi.x),
+				DPtoLP(offset.y, m_dpi.y)));
 
-		CBrush* pBrushOld = dc.SelectObject(&brFill);
-		dc.PatBlt(0, 0, rect.Width(), rect.Height(), PATINVERT);
-		dc.SelectObject(pBrushOld);
-	}
-};
-
-class CSnapAnimationImpAlpha : public CSnapAnimationImp
-{
-public:
-	~CSnapAnimationImpAlpha()
-	{
-		if (m_bGDIPlusStarted)
-		{
-			GdiplusShutdown(m_gdiplusToken);
-		}
-	}
-
-	BOOL Create(CWnd* pWndOwner) override
-	{
-		CRect rect;
-		rect.SetRectEmpty();
-
-		DWORD dwStyle = WS_POPUP;
-		DWORD dwExStyle = WS_EX_LAYERED;
-		UINT nClassStyle = 0;
-		BOOL bOK = m_pPreviewWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
-
-		if (bOK)
-		{
-			if (m_pPreviewWnd->IsAnimateByMovingWnd())
-				m_pPreviewWnd->SetLayeredWindowAttributes(0, 128, LWA_ALPHA);
+			dc->Clear();
+			D2D_RECT_F rect;
+			if (m_pALAWnd->IsAnimateByMovingWnd())
+			{
+				rect = D2D_RECT_F{ 0, 0, m_size.width, m_size.height };
+			}
 			else
 			{
-				GdiplusStartupInput gdiplusStartupInput;
-				GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
-				m_bGDIPlusStarted = true;
+				rect.left = DPtoLP(m_rect.left, m_dpi.x);
+				rect.top = DPtoLP(m_rect.top, m_dpi.y);
+				rect.right = DPtoLP(m_rect.right, m_dpi.y);
+				rect.bottom = DPtoLP(m_rect.bottom, m_dpi.y);
 			}
+			//dc->FillRectangle(rect, m_brush.Get());
+			D2D1_ROUNDED_RECT rRect;
+			rRect.rect = rect;
+			int width = GetSystemMetrics(SM_CXVSCROLL) / 2;
+			auto gap = DPtoLP(width, m_dpi.x);
+
+			rRect.radiusX = 10;
+			rRect.radiusY = 10;
+
+			m_brush->SetColor({ 0.8f, 0.8f, 0.8f, 0.5f });
+			//dc->FillRectangle(rect, m_brush.Get());
+			dc->FillRoundedRectangle(rRect, m_brush.Get());
+
+			m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.5f });
+
+			rRect.rect.left += gap;
+			rRect.rect.top += gap;
+			rRect.rect.right -= gap;
+			rRect.rect.bottom -= gap;
+			dc->FillRoundedRectangle(rRect, m_brush.Get());
+
+			HR(m_surface->EndDraw());
+			HR(m_device->Commit());
+			m_pALAWnd->ValidateRect(nullptr);
 		}
-		return bOK;
-	}
-
-	BOOL CanSupportAnimation() const override { return TRUE; }
-
-	void StartSnapping(const CRect& rectOwner) override
-	{
-		if (m_pPreviewWnd->IsAnimateByMovingWnd())
+		catch (ComException const&)
 		{
-			__super::StartSnapping(rectOwner);
-		}
-		else
-		{
-			m_pPreviewWnd->SetWindowPos(&CWnd::wndTop, rectOwner.left, rectOwner.top, rectOwner.Width(), rectOwner.Height(),
-				SWP_NOACTIVATE | SWP_NOREDRAW);
-
-			CSize size(rectOwner.Size());
-			if (m_szBmp != size)
-			{
-				m_bmp.DeleteObject();
-
-				m_pBits = NULL;
-				HBITMAP hBitmap = CDrawingManager::CreateBitmap_32(size, (void**)&m_pBits);
-				if (!hBitmap)
-				{
-					return;
-				}
-				m_bmp.Attach(hBitmap);
-				m_szBmp = size;
-			}
+			ReleaseDeviceResources();
 		}
 	}
+private:
+	RECT	m_rect;
+	ComPtr<ID2D1SolidColorBrush>	m_brush;
+};
 
-	void OnAnimationToUpdate(CRect rect) override
+class CSnapPreviewRenderImpAlpha : public CALAWndRenderImpAlpha
+{
+public:
+	void OnAnimationUpdateRendering() override
 	{
 		if (!m_bmp.GetSafeHandle())
 			return;
 		CRect rectClient;
-		m_pPreviewWnd->GetClientRect(rectClient);
+		m_pALAWnd->GetClientRect(rectClient);
 
 		CPoint point(0, 0);
 		CSize size(rectClient.Size());
 		ASSERT(size == m_szBmp);
 
-		CClientDC clientDC(m_pPreviewWnd);
+		CClientDC clientDC(m_pALAWnd);
 		CDC dc;
 		dc.CreateCompatibleDC(&clientDC);
 
 		CBitmap* pBitmapOld = (CBitmap*)dc.SelectObject(&m_bmp);
 
-		m_pPreviewWnd->ScreenToClient(rect);
+		CRect rect = ((CSnapPreviewWnd*)m_pALAWnd)->GetCurRect();
+		m_pALAWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 		{
 			COLORREF crfFill = RGB(66, 143, 222);
@@ -213,7 +145,7 @@ public:
 			gg.FillPath(&brush, &path);
 
 			brush.SetColor(color);
-			rc.Inflate(-diameter/2, -diameter/2);
+			rc.Inflate(-diameter / 2, -diameter / 2);
 			gg.FillRectangle(&brush, rc);
 		}
 
@@ -223,34 +155,23 @@ public:
 		bf.SourceConstantAlpha = 255;
 		bf.AlphaFormat = LWA_COLORKEY;
 
-		m_pPreviewWnd->UpdateLayeredWindow(NULL, 0, &size, &dc, &point, 0, &bf, ULW_ALPHA);
+		m_pALAWnd->UpdateLayeredWindow(NULL, 0, &size, &dc, &point, 0, &bf, ULW_ALPHA);
 
 		dc.SelectObject(pBitmapOld);
 
-		if (!m_pPreviewWnd->IsWindowVisible())
+		if (!m_pALAWnd->IsWindowVisible())
 		{
-			m_pPreviewWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
+			m_pALAWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
 				SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
 		}
 	}
 
-	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override
+	void HandlePaint() override
 	{
-		switch (message)
-		{
-		case WM_PAINT:
-			HandlePaint();
-			break;
-		}
-		return FALSE;
-	}
-private:
-	void HandlePaint()
-	{
-		CPaintDC dc(m_pPreviewWnd);
+		CPaintDC dc(m_pALAWnd);
 
 		CRect rect;
-		m_pPreviewWnd->GetClientRect(rect);
+		m_pALAWnd->GetClientRect(rect);
 
 		COLORREF crfFill = RGB(66, 143, 222);
 
@@ -267,377 +188,38 @@ private:
 		dc.SelectObject(oldBrush);
 		dc.SelectObject(oldPen);
 	}
-
-	CBitmap	m_bmp;
-	LPBYTE	m_pBits = nullptr;
-	CSize	m_szBmp;
-	bool m_bGDIPlusStarted = false;
-	ULONG_PTR m_gdiplusToken = 0;
 };
 
-using ProcDCompositionCreateDevice2 = decltype(DCompositionCreateDevice2)*;
-// minimum: Windows 8.1
-using ProcGetDpiForMonitor = decltype(GetDpiForMonitor)*;
-
-typedef HRESULT(*ProcD2D1CreateDevice)(
-	IDXGIDevice* dxgiDevice,
-	const D2D1_CREATION_PROPERTIES* creationProperties,
-	ID2D1Device** d2dDevice
-	);
-
-class CSnapAnimationImpDirectComposition : public CSnapAnimationImp
+class CSnapPreviewRenderImpInvert : public CALAWndRenderImpInvert
 {
-	static PFN_D3D11_CREATE_DEVICE	procD3D11CreateDevice;
-	static ProcD2D1CreateDevice		procD2D1CreateDevice;
-	static ProcDCompositionCreateDevice2 procDCompositionCreateDevice2;
-	static ProcGetDpiForMonitor procGetDpiForMonitor;
-	static BOOL s_bApplicableCheck;
 public:
-	static BOOL IsApplicable()
+	void HandlePaint() override
 	{
-		if (s_bApplicableCheck != (BOOL)-1)
-			return s_bApplicableCheck;
-		auto hD3D11 = LoadLibraryW(L"D3D11.dll");
-		if (hD3D11)
-		{
-			procD3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(hD3D11, "D3D11CreateDevice");
-		}
-		auto hD2d1 = LoadLibraryW(L"D2d1.dll");
-		if (hD2d1)
-		{
-			procD2D1CreateDevice = (ProcD2D1CreateDevice)GetProcAddress(hD2d1, "D2D1CreateDevice");
-		}
-		auto hDcomp = LoadLibraryW(L"Dcomp.dll");
-		if (hDcomp)
-		{
-			procDCompositionCreateDevice2 = (ProcDCompositionCreateDevice2)GetProcAddress(hDcomp, "DCompositionCreateDevice2");
-		}
-		auto hShcore = LoadLibraryW(L"Shcore.dll");
-		if (hShcore)
-		{
-			procGetDpiForMonitor = (ProcGetDpiForMonitor)GetProcAddress(hShcore, "GetDpiForMonitor");
-		}
-		BOOL bApplicable = procD3D11CreateDevice && procD2D1CreateDevice
-			&& procDCompositionCreateDevice2;
-		if (!bApplicable)
-		{
-			if (hD3D11)
-				FreeLibrary(hD3D11);
-			if (hD2d1)
-				FreeLibrary(hD2d1);
-			if (hDcomp)
-				FreeLibrary(hDcomp);
-			if (hShcore)
-				FreeLibrary(hShcore);
-		}
-		return s_bApplicableCheck = bApplicable;
-	}
+		CPaintDC dc(m_pALAWnd);
 
-	BOOL Create(CWnd* pWndOwner) override
-	{
 		CRect rect;
-		rect.SetRectEmpty();
+		m_pALAWnd->GetClientRect(rect);
 
-		DWORD dwStyle = WS_POPUP;
-		DWORD dwExStyle = WS_EX_NOREDIRECTIONBITMAP;
-		UINT nClassStyle = 0;
-		BOOL bOK = m_pPreviewWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+		COLORREF colorFill = RGB(47, 103, 190);
 
-		return bOK;
+		CBrush brFill(CDrawingManager::PixelAlpha(RGB(255 - GetRValue(colorFill), 255 - GetGValue(colorFill), 255 - GetBValue(colorFill)), 50));
+
+		CBrush* pBrushOld = dc.SelectObject(&brFill);
+		dc.PatBlt(0, 0, rect.Width(), rect.Height(), PATINVERT);
+		dc.SelectObject(pBrushOld);
 	}
-
-	struct ComException
-	{
-		HRESULT result;
-
-		ComException(HRESULT const value) :
-			result(value)
-		{}
-	};
-
-	static void HR(HRESULT const result)
-	{
-		if (S_OK != result)
-		{
-			throw ComException(result);
-		}
-	}
-
-	template <typename T>
-	static float DPtoLP(T const pixel, float const dpi)
-	{
-		return pixel * 96.0f / dpi;
-	}
-
-	bool IsDeviceCreated() const
-	{
-		return m_device3d;
-	}
-
-	void ReleaseDeviceResources()
-	{
-		m_device3d.Reset();
-	}
-
-	void CreateDeviceResources()
-	{
-		if (IsDeviceCreated())
-			return;
-
-		HR(procD3D11CreateDevice(nullptr,	// Adapter
-			D3D_DRIVER_TYPE_HARDWARE,
-			nullptr,	// Module
-			D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-			nullptr, 0,	// Highest available feature level
-			D3D11_SDK_VERSION,
-			m_device3d.GetAddressOf(),
-			nullptr,	// Actual feature level
-			nullptr));	// Device context
-		ComPtr<IDXGIDevice> devicex;
-		HR(m_device3d.As(&devicex));
-		ComPtr<ID2D1Device> device2d;
-		HR(procD2D1CreateDevice(devicex.Get(),
-			nullptr, // Default properties
-			device2d.GetAddressOf()));
-
-		HR(procDCompositionCreateDevice2(
-			device2d.Get(),
-			__uuidof(m_device),
-			reinterpret_cast<void**>(m_device.ReleaseAndGetAddressOf())));
-
-		auto hWnd = m_pPreviewWnd->GetSafeHwnd();
-		HR(m_device->CreateTargetForHwnd(hWnd,
-			true, // Top most
-			m_target.ReleaseAndGetAddressOf()));
-		HR(m_device->CreateVisual(m_visual.ReleaseAndGetAddressOf()));
-		RECT rect = {};
-		m_pPreviewWnd->GetClientRect(&rect);
-
-		HR(m_device->CreateSurface(rect.right - rect.left,
-			rect.bottom - rect.top,
-			DXGI_FORMAT_B8G8R8A8_UNORM,
-			DXGI_ALPHA_MODE_PREMULTIPLIED,
-			m_surface.ReleaseAndGetAddressOf()));
-		HR(m_visual->SetContent(m_surface.Get()));
-		HR(m_target->SetRoot(m_visual.Get()));
-
-		ComPtr<ID2D1DeviceContext> dc;
-		HR(device2d->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
-			dc.GetAddressOf()));
-		D2D_COLOR_F const color = { 0.26f, 0.56f, 0.87f, 0.5f };
-		HR(dc->CreateSolidColorBrush(color,
-			m_brush.ReleaseAndGetAddressOf()));
-		HMONITOR const monitor = MonitorFromWindow(hWnd,
-			MONITOR_DEFAULTTONEAREST);
-		unsigned x = 0;
-		unsigned y = 0;
-		if (procGetDpiForMonitor)
-		{
-			HR(procGetDpiForMonitor(monitor,
-				MDT_EFFECTIVE_DPI,
-				&x,
-				&y));
-		}
-		else
-		{
-			CClientDC dc(nullptr);
-			x = dc.GetDeviceCaps(LOGPIXELSX);
-			y = dc.GetDeviceCaps(LOGPIXELSY);
-		}
-		m_dpi.x = static_cast<float>(x);
-		m_dpi.y = static_cast<float>(y);
-		m_size.width = (rect.right - rect.left) * 96 / m_dpi.x;
-		m_size.height = (rect.bottom - rect.top) * 96 / m_dpi.y;
-	}
-
-	BOOL CanSupportAnimation() const override { return TRUE; }
-
-	void StartSnapping(const CRect& rectOwner) override
-	{
-		if (m_pPreviewWnd->IsAnimateByMovingWnd())
-		{
-			__super::StartSnapping(rectOwner);
-		}
-		else
-		{
-			m_pPreviewWnd->SetWindowPos(&CWnd::wndTop, rectOwner.left, rectOwner.top, rectOwner.Width(), rectOwner.Height(),
-				SWP_NOACTIVATE | SWP_NOREDRAW);
-		}
-	}
-
-	void OnAnimationToUpdate(CRect rect) override
-	{
-		m_rect = rect;
-		m_pPreviewWnd->ScreenToClient(&m_rect);
-
-		m_pPreviewWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
-			SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
-		m_pPreviewWnd->RedrawWindow();
-	}
-
-	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override
-	{
-		switch (message)
-		{
-		case WM_PAINT:
-			HandlePaint();
-			break;
-		case WM_SIZE:
-			HandleSize(wParam, lParam);
-			break;
-		case WM_DPICHANGED:
-			HandleDPIChanged(wParam, lParam);
-			break;
-		}
-		return FALSE;
-	}
-
-	void HandlePaint()
-	{
-		try
-		{
-			CreateDeviceResources();
-
-			ComPtr<ID2D1DeviceContext> dc;
-			POINT offset = {};
-			HR(m_surface->BeginDraw(nullptr, // Entire surface
-				__uuidof(dc),
-				reinterpret_cast<void**>(dc.GetAddressOf()),
-				&offset));
-
-			dc->SetDpi(m_dpi.x, m_dpi.y);
-
-			dc->SetTransform(Matrix3x2F::Translation(DPtoLP(offset.x, m_dpi.x),
-				DPtoLP(offset.y, m_dpi.y)));
-
-			dc->Clear();
-			D2D_RECT_F rect;
-			if (m_pPreviewWnd->IsAnimateByMovingWnd())
-			{
-				rect = D2D_RECT_F{0, 0, m_size.width, m_size.height };
-			}
-			else
-			{
-				rect.left = DPtoLP(m_rect.left, m_dpi.x);
-				rect.top = DPtoLP(m_rect.top, m_dpi.y);
-				rect.right = DPtoLP(m_rect.right, m_dpi.y);
-				rect.bottom = DPtoLP(m_rect.bottom, m_dpi.y);
-			}
-			//dc->FillRectangle(rect, m_brush.Get());
-			D2D1_ROUNDED_RECT rRect;
-			rRect.rect = rect;
-			int width = GetSystemMetrics(SM_CXVSCROLL) / 2;
-			auto gap = DPtoLP(width, m_dpi.x);
-			
-			rRect.radiusX = 10;
-			rRect.radiusY = 10;
-			
-			m_brush->SetColor({0.8f, 0.8f, 0.8f, 0.5f});
-			//dc->FillRectangle(rect, m_brush.Get());
-			dc->FillRoundedRectangle(rRect, m_brush.Get());
-
-			m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.5f });
-
-			rRect.rect.left += gap;
-			rRect.rect.top += gap;
-			rRect.rect.right -= gap;
-			rRect.rect.bottom -= gap;
-			dc->FillRoundedRectangle(rRect, m_brush.Get());
-
-			HR(m_surface->EndDraw());
-			HR(m_device->Commit());
-			m_pPreviewWnd->ValidateRect(nullptr);
-		}
-		catch (ComException const&)
-		{
-			ReleaseDeviceResources();
-		}
-	}
-
-	void HandleSize(WPARAM wparam, LPARAM lparam)
-	{
-		try
-		{
-			if (!IsDeviceCreated())
-				return;
-			if (SIZE_MINIMIZED == wparam)
-				return;
-			unsigned const width = LOWORD(lparam);
-			unsigned const height = HIWORD(lparam);
-			m_size.width = DPtoLP(width, m_dpi.x);
-			m_size.height = DPtoLP(height, m_dpi.y);
-
-			HR(m_device->CreateSurface(width,
-				height,
-				DXGI_FORMAT_B8G8R8A8_UNORM,
-				DXGI_ALPHA_MODE_PREMULTIPLIED,
-				m_surface.ReleaseAndGetAddressOf()));
-			HR(m_visual->SetContent(m_surface.Get()));
-		}
-		catch (ComException const&)
-		{
-			ReleaseDeviceResources();
-		}
-	}
-
-	void HandleDPIChanged(WPARAM wParam, LPARAM lParam)
-	{
-		m_dpi.x = LOWORD(wParam);
-		m_dpi.y = HIWORD(wParam);
-		RECT const& rect = *reinterpret_cast<RECT const*>(lParam);
-		VERIFY(m_pPreviewWnd->SetWindowPos(
-			&CWnd::wndTop,
-			rect.left,
-			rect.top,
-			rect.right - rect.left,
-			rect.bottom - rect.top,
-			SWP_NOACTIVATE));
-	}
-private:
-	// Device independent resources
-	ComPtr<ID2D1SolidColorBrush>	m_brush;
-	D2D_SIZE_F						m_size;
-	D2D_POINT_2F					m_dpi;
-	
-	RECT							m_rect;
-
-	// Device resources
-	ComPtr<ID3D11Device>			m_device3d;
-	// The DirectComposition device
-	ComPtr<IDCompositionDesktopDevice> m_device;
-	ComPtr<IDCompositionTarget>  m_target;
-	ComPtr<IDCompositionVisual2> m_visual;
-	ComPtr<IDCompositionSurface> m_surface;
 };
-
-PFN_D3D11_CREATE_DEVICE	CSnapAnimationImpDirectComposition::procD3D11CreateDevice = nullptr;
-ProcD2D1CreateDevice			CSnapAnimationImpDirectComposition::procD2D1CreateDevice = nullptr;
-ProcDCompositionCreateDevice2	CSnapAnimationImpDirectComposition::procDCompositionCreateDevice2 = nullptr;
-ProcGetDpiForMonitor	CSnapAnimationImpDirectComposition::procGetDpiForMonitor = nullptr;
-BOOL	CSnapAnimationImpDirectComposition::s_bApplicableCheck = (BOOL)-1;
-
-//////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-CSnapPreviewWnd::CSnapPreviewWnd()
-{
-	
-}
-
-CSnapPreviewWnd::~CSnapPreviewWnd()
-{
-}
 
 void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 {
 	ASSERT_VALID(pWndOwner);
 	m_pWndOwner = pWndOwner;
-
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-		if (CSnapAnimationImpDirectComposition::IsApplicable())
+		if (CALAWndRenderImpDirectComposition::IsApplicable())
 		{
-			m_animation = std::make_unique<CSnapAnimationImpDirectComposition>();
+			m_renderImp = std::make_shared<CSnapPreviewRenderImpDirectComposition>();
 			break;
 		}
 		// fall through
@@ -645,19 +227,19 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 		if (GetGlobalData()->m_nBitsPerPixel > 8)
 		{
 			m_tech = RenderTech::AlphaBlendedLayer;
-			m_animation = std::make_unique<CSnapAnimationImpAlpha>();
+			m_renderImp = std::make_shared<CSnapPreviewRenderImpAlpha>();
 			break;
 		}
 	case RenderTech::InvertColor:
 	default:
 		// fall through
 		m_tech = RenderTech::InvertColor;
-		m_animation = std::make_unique<CSnapAnimationImpInvert>();
+		m_renderImp = std::make_shared<CSnapPreviewRenderImpInvert>();
 		break;
 	}
-	ASSERT(m_animation);
-	m_animation->m_pPreviewWnd = this;
-	m_animation->Create(pWndOwner);
+	ASSERT(m_renderImp);
+	m_renderImp->AttachToALAWnd(this);
+	m_renderImp->Create(pWndOwner);
 }
 
 void CSnapPreviewWnd::StartSnapping()
@@ -665,17 +247,17 @@ void CSnapPreviewWnd::StartSnapping()
 	ASSERT(m_pWndOwner && !IsWindowVisible());
 	m_pWndOwner->GetClientRect(&m_rcOwner);
 	m_pWndOwner->ClientToScreen(&m_rcOwner);
-	if (m_animation)
+	if (m_renderImp)
 	{
-		m_animation->StartSnapping(m_rcOwner);
+		m_renderImp->StartRendering();
 	}
 }
 
 void CSnapPreviewWnd::StopSnapping(bool bAbort)
 {
-	if (m_animation)
+	if (m_renderImp)
 	{
-		m_animation->StopSnapping(bAbort);
+		m_renderImp->StopRendering(bAbort);
 		m_aniStage = AnimateStage::Hiding;
 		FinishAnimationCleanup();
 	}
@@ -723,151 +305,41 @@ void CSnapPreviewWnd::Hide()
 	}
 }
 
-void CSnapPreviewWnd::RepositionWindow(const CRect& rect)
-{
-	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),
-		SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
-	RedrawWindow();
-}
-
 void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
 {
 	m_rectCur = rect;
-	if (m_animation)
-		m_animation->OnAnimationTo(rect);
+	if (m_renderImp)
+	{
+		if (IsAnimateByMovingWnd())
+			RepositionWindow(m_rectCur);
+		else
+			m_renderImp->OnAnimationUpdateRendering();
+	}
 	if (bFinish)
 	{
 		FinishAnimationCleanup();
 	}
 }
 
-void CSnapPreviewWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) const
+constexpr double AnimationDuration = 0.15;
+
+void CSnapPreviewWnd::OnAnimationTimer(double timeDiff)
 {
-	if (pWnd)
-		pWnd->GetWindowRect(rect);
-	rect.left = std::max(rect.left, m_rcOwner.left);
-	rect.top = std::max(rect.top, m_rcOwner.top);
-	rect.right = std::min(rect.right, m_rcOwner.right);
-	rect.bottom = std::min(rect.bottom, m_rcOwner.bottom);
-}
-
-void CSnapPreviewWnd::StopAnimation()
-{
-	if (m_nAniTimerID)
-	{
-		KillTimer(m_nAniTimerID);
-		m_nAniTimerID = 0;
-	}
-}
-
-void CSnapPreviewWnd::FinishAnimationCleanup()
-{
-	StopAnimation();
-	if (m_aniStage != AnimateStage::Showing)
-	{
-		ShowWindow(SW_HIDE);
-		m_pActiveSnapWnd = nullptr;
-		m_aniStage = AnimateStage::Ready;
-	}
-}
-
-enum
-{	AnimationInterval = 10
-};
-
-void CSnapPreviewWnd::ScheduleAnimation()
-{
-	m_AniStartTime = std::chrono::steady_clock::now();
-	m_nAniTimerID = SetTimer(100, AnimationInterval, nullptr);
-}
-
-bool CSnapPreviewWnd::ShouldDoAnimation() const
-{
-	if (!m_bEnableAnimation)
-		return false;
-	if (!m_animation)
-		return false;
-	return m_animation->CanSupportAnimation();
-}
-
-
-BOOL CSnapPreviewWnd::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
-{
-	if (m_animation)
-	{
-		if (m_animation->OnWndMsg(message, wParam, lParam, pResult))
-			return TRUE;
-	}
-	return __super::OnWndMsg(message, wParam, lParam, pResult);
-}
-
-BEGIN_MESSAGE_MAP(CSnapPreviewWnd, CWnd)
-	ON_WM_ERASEBKGND()
-	ON_WM_TIMER()
-	ON_WM_DESTROY()
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CSnapPreviewWnd message handlers
-
-BOOL CSnapPreviewWnd::OnEraseBkgnd(CDC* /*pDC*/)
-{
-	return TRUE;
-}
-
-// How to programmatically move a window slowly, as if the user were doing it?
-// see https://stackoverflow.com/questions/932706/how-to-programmatically-move-a-window-slowly-as-if-the-user-were-doing-it
-inline static double SmoothMoveELX(double x)
-{
-	double dPI = atan(1) * 4;
-	return (cos((1 - x) * dPI) + 1) / 2;
-}
-
-inline static LONG CalcSmoothPos(double pos, LONG from, LONG to)
-{
-	if (from == to || pos > 1.)
-		return to;
-	auto newPos = from * (1 - SmoothMoveELX(pos))
-		+ to * SmoothMoveELX(pos);
-	//auto newPos = from + (to - from) * pos;
-	return (LONG)newPos;
-}
-
-void CSnapPreviewWnd::OnTimer(UINT_PTR nIDEvent)
-{
-	if (nIDEvent != m_nAniTimerID)
-		return;
-	auto curTime = std::chrono::steady_clock::now();
-	std::chrono::duration<double> timeDiff = curTime - m_AniStartTime;
-	auto timeDiffCount = timeDiff.count();
-
-	constexpr double duration = 0.15;
-
 	if (m_aniStage == AnimateStage::Hiding)
 	{
 		GetWindowInOwnerRect(m_rectTo, m_pActiveSnapWnd);
 	}
 
 	CRect rect;
-	bool bFinish = timeDiffCount >= duration;
+	bool bFinish = timeDiff >= AnimationDuration;
 	if (bFinish)
 	{
 		rect = m_rectTo;
 	}
 	else
 	{
-		auto dPos = (double)timeDiffCount / duration;
-		rect.left = CalcSmoothPos(dPos, m_rectFrom.left, m_rectTo.left);
-		rect.top = CalcSmoothPos(dPos, m_rectFrom.top, m_rectTo.top);
-		rect.right = CalcSmoothPos(dPos, m_rectFrom.right, m_rectTo.right);
-		rect.bottom = CalcSmoothPos(dPos, m_rectFrom.bottom, m_rectTo.bottom);
+		auto dPos = timeDiff / AnimationDuration;
+		rect = AnimateRect(dPos, m_rectFrom, m_rectTo);
 	}
 	OnAnimationTo(rect, bFinish);
 }
-
-void CSnapPreviewWnd::OnDestroy()
-{
-	StopAnimation();
-	__super::OnDestroy();
-}
-

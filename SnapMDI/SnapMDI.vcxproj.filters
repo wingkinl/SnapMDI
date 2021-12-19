@@ -51,6 +51,15 @@
     <ClInclude Include="SnapWindowManager.h">
       <Filter>SnapInChild</Filter>
     </ClInclude>
+    <ClInclude Include="AlphaLayeredAnimationWnd.h">
+      <Filter>SnapInChild</Filter>
+    </ClInclude>
+    <ClInclude Include="ALAWndRenderImp.h">
+      <Filter>SnapInChild</Filter>
+    </ClInclude>
+    <ClInclude Include="ALAWndRenderImpEx.h">
+      <Filter>SnapInChild</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SnapMDI.cpp">
@@ -75,6 +84,12 @@
       <Filter>SnapInChild</Filter>
     </ClCompile>
     <ClCompile Include="SnapWindowManager.cpp">
+      <Filter>SnapInChild</Filter>
+    </ClCompile>
+    <ClCompile Include="AlphaLayeredAnimationWnd.cpp">
+      <Filter>SnapInChild</Filter>
+    </ClCompile>
+    <ClCompile Include="ALAWndRenderImpEx.cpp">
       <Filter>SnapInChild</Filter>
     </ClCompile>
   </ItemGroup>
