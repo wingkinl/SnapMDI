@@ -211,14 +211,8 @@ public:
 	}
 };
 
-BEGIN_MESSAGE_MAP(CSnapPreviewWnd, CSnapPreviewWndBase)
-	ON_WM_TIMER()
-	ON_WM_DESTROY()
-END_MESSAGE_MAP()
-
 CSnapPreviewWnd::CSnapPreviewWnd(CSnapWindowManager* pManager)
 {
-	m_pSnapManager = pManager;
 }
 
 void CSnapPreviewWnd::Create(CWnd* pWndOwner)
@@ -263,13 +257,11 @@ void CSnapPreviewWnd::StartSnapping()
 	{
 		m_renderImp->StartRendering();
 	}
-	EnableSnapSwitchCheck(true);
 }
 
 void CSnapPreviewWnd::StopSnapping(bool bAbort)
 {
 	m_bStartedSnapping = false;
-	EnableSnapSwitchCheck(false);
 	if (m_renderImp)
 	{
 		m_renderImp->StopRendering(bAbort);
@@ -325,29 +317,6 @@ void CSnapPreviewWnd::Hide()
 	}
 }
 
-enum
-{
-	SnapSwitchCheckInterval = 100,
-	SnapSWitchVirtualkey	= VK_SHIFT,
-};
-
-void CSnapPreviewWnd::EnableSnapSwitchCheck(bool bEnable)
-{
-	if (bEnable)
-	{
-		if (!m_nTimerIDSnapSwitch)
-		{
-			m_nTimerIDSnapSwitch = SetTimer(200, SnapSwitchCheckInterval, nullptr);
-			m_bSwitchKeyPressed = GetAsyncKeyState(SnapSWitchVirtualkey) < 0;
-		}
-	}
-	else if (m_nTimerIDSnapSwitch)
-	{
-		KillTimer(m_nTimerIDSnapSwitch);
-		m_nTimerIDSnapSwitch = 0;
-	}
-}
-
 void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
 {
 	m_rectCur = rect;
@@ -387,29 +356,3 @@ void CSnapPreviewWnd::OnAnimationTimer(double timeDiff)
 	OnAnimationTo(rect, bFinish);
 }
 
-bool CSnapPreviewWnd::CheckSnapSwitch() const
-{
-	bool bPressed = GetAsyncKeyState(SnapSWitchVirtualkey) < 0;
-	return bPressed;
-}
-
-void CSnapPreviewWnd::OnTimer(UINT_PTR nIDEvent)
-{
-	if (nIDEvent == m_nTimerIDSnapSwitch)
-	{
-		bool bSwitchKeyPressed = CheckSnapSwitch();
-		if (bSwitchKeyPressed ^ m_bSwitchKeyPressed)
-		{
-			m_pSnapManager->OnSnapSwitch(bSwitchKeyPressed);
-			m_bSwitchKeyPressed = bSwitchKeyPressed;
-		}
-		return;
-	}
-	return CSnapPreviewWndBase::OnTimer(nIDEvent);
-}
-
-void CSnapPreviewWnd::OnDestroy()
-{
-	EnableSnapSwitchCheck(false);
-	return CSnapPreviewWndBase::OnDestroy();
-}

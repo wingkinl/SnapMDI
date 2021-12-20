@@ -21,19 +21,10 @@ public:
 	void Hide();
 
 	const CRect& GetCurRect() const { return m_rectCur; }
-
-	void EnableSnapSwitchCheck(bool bEnable);
-
-	bool CheckSnapSwitch() const;
 private:
 	void OnAnimationTo(const CRect& rect, bool bFinish);
 
 	void OnAnimationTimer(double timeDiff) override;
-
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void OnDestroy();
-
-	DECLARE_MESSAGE_MAP()
 private:
 	CSnapWindowManager* m_pSnapManager = nullptr;
 
@@ -41,7 +32,4 @@ private:
 	CRect		m_rectCur;
 	CRect		m_rectFrom;
 	CRect		m_rectTo;
-
-	UINT_PTR	m_nTimerIDSnapSwitch = 0;
-	bool		m_bSwitchKeyPressed = false;
 };

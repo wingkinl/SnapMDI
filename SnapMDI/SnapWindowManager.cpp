@@ -3,7 +3,6 @@
 #include "SnapWindowManager.h"
 #include "SnapPreviewWnd.h"
 #include <algorithm>
-#include <map>
 
 #undef min
 #undef max
@@ -20,6 +19,8 @@ CSnapWindowManager::~CSnapWindowManager()
 {
 
 }
+
+CSnapWindowManager::TimerMap CSnapWindowManager::s_mapTimers;
 
 void CSnapWindowManager::InitSnap(CWnd* pWndOwner)
 {
@@ -132,6 +133,8 @@ void CSnapWindowManager::PreSnapInitialize()
 
 	ASSERT(m_curSnapWndMinMax.ptMinTrackSize.x <= m_curSnapWndMinMax.ptMaxTrackSize.x);
 	ASSERT(m_curSnapWndMinMax.ptMinTrackSize.y <= m_curSnapWndMinMax.ptMaxTrackSize.y);
+
+	EnableSnapSwitchCheck(true);
 }
 
 void CSnapWindowManager::StartMoving(CSnapWindowHelper* pWndHelper)
@@ -154,6 +157,8 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 {
 	if (!m_wndSnapPreview)
 		return;
+	EnableSnapSwitchCheck(false);
+
 	m_wndSnapPreview->StopSnapping(bAbort);
 
 	if (!bAbort && m_curGrid.type != SnapGridType::None)
@@ -196,6 +201,7 @@ void CSnapWindowManager::OnAfterSnap()
 
 void CSnapWindowManager::OnAfterSnapToOwner()
 {
+#if 0
 	if (m_vChildRects.empty())
 		return;
 
@@ -218,6 +224,7 @@ void CSnapWindowManager::OnAfterSnapToOwner()
 		SendMessage(wnd.hWndChild, WM_PRINT, (WPARAM)memDC.GetSafeHdc(), (LPARAM)(PRF_CLIENT | PRF_ERASEBKGND | PRF_CHILDREN | PRF_NONCLIENT));
 		//pWndChild->PrintWindow(&memDC, 0);
 	}
+#endif
 }
 
 void CSnapWindowManager::OnAfterSnapToChild()
@@ -419,7 +426,7 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 
 BOOL CSnapWindowManager::CanDoSnapping(SnapTargetType target) const
 {
-	if (m_wndSnapPreview->CheckSnapSwitch())
+	if (CheckSnapSwitch())
 		return false;
 	return true;
 }
@@ -530,6 +537,66 @@ void CSnapWindowManager::OnSnapSwitch(bool bPressed)
 		GetCursorPos(&ptCurrent);
 		OnMoving(ptCurrent);
 	}
+}
+
+enum
+{
+	SnapSwitchCheckInterval = 100,
+	SnapSWitchVirtualkey	= VK_SHIFT,
+};
+
+void CSnapWindowManager::EnableSnapSwitchCheck(bool bEnable)
+{
+	if (bEnable)
+	{
+		if (!m_nTimerIDSnapSwitch)
+		{
+			m_nTimerIDSnapSwitch = SetTimer(nullptr, 0, SnapSwitchCheckInterval, TimerProc);
+			s_mapTimers[m_nTimerIDSnapSwitch] = this;
+			m_bSwitchPressed = CheckSnapSwitch();
+		}
+	}
+	else if (m_nTimerIDSnapSwitch)
+	{
+		KillTimer(m_nTimerIDSnapSwitch);
+		m_nTimerIDSnapSwitch = 0;
+	}
+}
+
+bool CSnapWindowManager::CheckSnapSwitch() const
+{
+	bool bPressed = GetAsyncKeyState(SnapSWitchVirtualkey) < 0;
+	return bPressed;
+}
+
+void CALLBACK CSnapWindowManager::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+{
+	CSnapWindowManager* pManager = s_mapTimers[idEvent];
+	if (pManager)
+	{
+		pManager->OnTimer(idEvent, dwTime);
+	}
+}
+
+void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
+{
+	if (nIDEvent == m_nTimerIDSnapSwitch)
+	{
+		bool bSwitchKeyPressed = CheckSnapSwitch();
+		if (bSwitchKeyPressed ^ m_bSwitchPressed)
+		{
+			OnSnapSwitch(bSwitchKeyPressed);
+			m_bSwitchPressed = bSwitchKeyPressed;
+		}
+	}
+}
+
+void CSnapWindowManager::KillTimer(UINT_PTR nID)
+{
+	::KillTimer(nullptr, nID);
+	auto ref = s_mapTimers[nID];
+	ASSERT(ref == this);
+	s_mapTimers.erase(nID);
 }
 
 //////////////////////////////////////////////////////////////////////////

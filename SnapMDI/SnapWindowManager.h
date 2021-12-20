@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <map>
 
 class CSnapPreviewWnd;
 class CSnapWindowHelper;
@@ -128,6 +129,16 @@ protected:
 	virtual SnapGridInfo GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const;
 private:
 	void PreSnapInitialize();
+
+	void EnableSnapSwitchCheck(bool bEnable);
+
+	bool CheckSnapSwitch() const;
+
+	static void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+
+	void OnTimer(UINT_PTR nIDEvent, DWORD dwTime);
+
+	void KillTimer(UINT_PTR nID);
 protected:
 	friend class CSnapWindowHelper;
 
@@ -146,6 +157,12 @@ protected:
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
 	std::vector<ChildWndInfo>	m_vChildRects;
+
+	UINT_PTR	m_nTimerIDSnapSwitch = 0;
+	bool		m_bSwitchPressed = false;
+
+	typedef std::map<UINT_PTR, CSnapWindowManager*> TimerMap;
+	static TimerMap	s_mapTimers;
 };
 
 
