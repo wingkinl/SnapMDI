@@ -138,7 +138,10 @@ private:
 
 	void OnTimer(UINT_PTR nIDEvent, DWORD dwTime);
 
+	UINT_PTR SetTimer(UINT_PTR nID, UINT uElapse);
 	void KillTimer(UINT_PTR nID);
+
+	void HandleNCHitTest(SnapWndMsg& msg);
 protected:
 	friend class CSnapWindowHelper;
 
@@ -160,6 +163,9 @@ protected:
 
 	UINT_PTR	m_nTimerIDSnapSwitch = 0;
 	bool		m_bSwitchPressed = false;
+
+	UINT_PTR	m_nTimerIDSplit = 0;
+	int			m_nSplitHittest = HTNOWHERE;
 
 	typedef std::map<UINT_PTR, CSnapWindowManager*> TimerMap;
 	static TimerMap	s_mapTimers;

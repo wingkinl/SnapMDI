@@ -103,6 +103,7 @@ LRESULT CSnapWindowManager::PostWndMsg(SnapWndMsg& msg)
 	switch (msg.message)
 	{
 	case WM_NCHITTEST:
+		HandleNCHitTest(msg);
 		break;
 	}
 	return msg.result;
@@ -551,8 +552,7 @@ void CSnapWindowManager::EnableSnapSwitchCheck(bool bEnable)
 	{
 		if (!m_nTimerIDSnapSwitch)
 		{
-			m_nTimerIDSnapSwitch = SetTimer(nullptr, 0, SnapSwitchCheckInterval, TimerProc);
-			s_mapTimers[m_nTimerIDSnapSwitch] = this;
+			m_nTimerIDSnapSwitch = SetTimer(0, SnapSwitchCheckInterval);
 			m_bSwitchPressed = CheckSnapSwitch();
 		}
 	}
@@ -589,6 +589,18 @@ void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 			m_bSwitchPressed = bSwitchKeyPressed;
 		}
 	}
+	else if (nIDEvent == m_nTimerIDSplit)
+	{
+		KillTimer(nIDEvent);
+		m_nTimerIDSplit = 0;
+	}
+}
+
+UINT_PTR CSnapWindowManager::SetTimer(UINT_PTR nID, UINT uElapse)
+{
+	nID = ::SetTimer(nullptr, nID, uElapse, TimerProc);
+	s_mapTimers[nID] = this;
+	return nID;
 }
 
 void CSnapWindowManager::KillTimer(UINT_PTR nID)
@@ -597,6 +609,19 @@ void CSnapWindowManager::KillTimer(UINT_PTR nID)
 	auto ref = s_mapTimers[nID];
 	ASSERT(ref == this);
 	s_mapTimers.erase(nID);
+}
+
+void CSnapWindowManager::HandleNCHitTest(SnapWndMsg& msg)
+{
+	switch (msg.result)
+	{
+	case HTLEFT:
+	case HTTOP:
+	case HTRIGHT:
+	case HTBOTTOM:
+		m_nTimerIDSplit = SetTimer(m_nTimerIDSplit, 100);
+		break;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
