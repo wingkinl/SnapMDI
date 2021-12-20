@@ -48,7 +48,7 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 			if (m_bIsMoving)
 			{
 				ASSERT(msg.pHelper == m_pCurSnapWnd);
-				StopMoving(m_bAborted);
+				StopMoving(m_bAborted || !CanDoSnapping(m_snapTarget));
 				m_bIsMoving = FALSE;
 			}
 			m_snapTarget = SnapTargetType::None;
@@ -417,7 +417,7 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 	return { SnapGridType::None };
 }
 
-BOOL CSnapWindowManager::IsSnappingApplicable(SnapTargetType target) const
+BOOL CSnapWindowManager::CanDoSnapping(SnapTargetType target) const
 {
 	if (m_wndSnapPreview->CheckSnapSwitch())
 		return false;
@@ -427,7 +427,7 @@ BOOL CSnapWindowManager::IsSnappingApplicable(SnapTargetType target) const
 auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 {
 	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
-	if (!IsSnappingApplicable(SnapTargetType::Owner))
+	if (!CanDoSnapping(SnapTargetType::Owner))
 		return grid;
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
@@ -466,7 +466,7 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 {
 	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
-	if (!IsSnappingApplicable(SnapTargetType::Child))
+	if (!CanDoSnapping(SnapTargetType::Child))
 		return grid;
 	for (auto& wnd : m_vChildRects)
 	{
