@@ -138,7 +138,9 @@ protected:
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
 	POINT				m_ptStart = { 0 };
 	BOOL				m_bEnterSizeMove = FALSE;
+	BOOL				m_bCheckMoveAbortion = FALSE;
 	BOOL				m_bIsMoving = FALSE;
+	BOOL				m_bAborted = FALSE;
 	SnapTargetType		m_snapTarget = SnapTargetType::None;
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 

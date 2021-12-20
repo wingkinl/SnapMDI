@@ -35,6 +35,8 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 		if (m_bEnterSizeMove)
 		{
 			m_snapTarget = SnapTargetTypeUnknown;
+			m_bCheckMoveAbortion = FALSE;
+			m_bAborted = FALSE;
 			GetCursorPos(&m_ptStart);
 		}
 		break;
@@ -44,7 +46,7 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 			if (m_bIsMoving)
 			{
 				ASSERT(msg.pHelper == m_pCurSnapWnd);
-				StopMoving();
+				StopMoving(m_bAborted);
 				m_bIsMoving = FALSE;
 			}
 			m_snapTarget = SnapTargetType::None;
@@ -76,6 +78,16 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 			}
 			OnMoving(ptCurrent);
 		}
+		break;
+	case WM_CHILDACTIVATE:
+		if (m_bEnterSizeMove)
+			m_bCheckMoveAbortion = TRUE;
+		break;
+	case WM_MOVE:
+		// Whiling dragging the window around, users can press ESC to abort.
+		// It seems that WM_MOVE after WM_CHILDACTIVATE indicates a restoration of window position
+		if (m_bCheckMoveAbortion)
+			m_bAborted = TRUE;
 		break;
 	case WM_NCHITTEST:
 		return SnapWndMsg::HandleResult::NeedPostWndMsg;
@@ -327,7 +339,9 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 BOOL CSnapWindowManager::IsSnappingApplicable(SnapTargetType target) const
 {
 	if (GetKeyState(VK_SHIFT) < 0)
+	{
 		return false;
+	}
 	return true;
 }
 
