@@ -109,7 +109,7 @@ CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
 {
 	if (!m_wndSnapPreview)
 	{
-		m_wndSnapPreview.reset(new CSnapPreviewWnd);
+		m_wndSnapPreview.reset(new CSnapPreviewWnd(this));
 		m_wndSnapPreview->Create(m_pWndOwner);
 	}
 	return m_wndSnapPreview.get();
@@ -338,10 +338,8 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 
 BOOL CSnapWindowManager::IsSnappingApplicable(SnapTargetType target) const
 {
-	if (GetKeyState(VK_SHIFT) < 0)
-	{
+	if (m_wndSnapPreview->CheckSnapSwitch())
 		return false;
-	}
 	return true;
 }
 
@@ -436,6 +434,21 @@ auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& c
 		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Child);
 	}
 	return grid;
+}
+
+void CSnapWindowManager::OnSnapSwitch(bool bPressed)
+{
+	if (bPressed)
+	{
+		m_curGrid.type = SnapGridType::None;
+		m_wndSnapPreview->Hide();
+	}
+	else
+	{
+		CPoint ptCurrent;
+		GetCursorPos(&ptCurrent);
+		OnMoving(ptCurrent);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////

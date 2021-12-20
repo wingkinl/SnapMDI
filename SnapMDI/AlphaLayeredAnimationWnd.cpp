@@ -34,10 +34,10 @@ void CAlphaLayeredAnimationWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) co
 
 void CAlphaLayeredAnimationWnd::StopAnimation()
 {
-	if (m_nAniTimerID)
+	if (m_nTimerIDAni)
 	{
-		KillTimer(m_nAniTimerID);
-		m_nAniTimerID = 0;
+		KillTimer(m_nTimerIDAni);
+		m_nTimerIDAni = 0;
 	}
 }
 
@@ -59,7 +59,7 @@ enum
 void CAlphaLayeredAnimationWnd::ScheduleAnimation()
 {
 	m_AniStartTime = std::chrono::steady_clock::now();
-	m_nAniTimerID = SetTimer(100, AnimationInterval, nullptr);
+	m_nTimerIDAni = SetTimer(TimerIDAnimation, AnimationInterval, nullptr);
 }
 
 bool CAlphaLayeredAnimationWnd::ShouldDoAnimation() const
@@ -125,7 +125,7 @@ CRect CAlphaLayeredAnimationWnd::AnimateRect(double pos, const RECT& from, const
 
 void CAlphaLayeredAnimationWnd::OnTimer(UINT_PTR nIDEvent)
 {
-	if (nIDEvent != m_nAniTimerID)
+	if (nIDEvent != m_nTimerIDAni)
 		return;
 	auto curTime = std::chrono::steady_clock::now();
 	std::chrono::duration<double> timeDiff = curTime - m_AniStartTime;

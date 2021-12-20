@@ -29,6 +29,8 @@ public:
 	virtual ~CSnapWindowManager();
 public:
 	void InitSnap(CWnd* pWndOwner);
+
+	virtual void OnSnapSwitch(bool bPressed);
 protected:
 	SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg);
 

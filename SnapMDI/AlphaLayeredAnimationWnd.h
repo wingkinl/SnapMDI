@@ -69,7 +69,9 @@ protected:
 
 	std::shared_ptr<CALAWndRenderImp> m_renderImp;
 
-	UINT_PTR	m_nAniTimerID = 0;
+	enum {TimerIDAnimation = 100};
+
+	UINT_PTR	m_nTimerIDAni = 0;
 	std::chrono::time_point<std::chrono::steady_clock>	m_AniStartTime;
 
 	// Implementation
