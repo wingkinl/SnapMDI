@@ -77,20 +77,19 @@ protected:
 	{
 		HWND	hWndChild;
 		RECT	rect;
-		BYTE	states;
-		HWND	hWndSiblingLeft;
-		HWND	hWndSiblingTop;
-		HWND	hWndSiblingRight;
-		HWND	hWndSiblingBottom;
 
 		enum class StateFlag : BYTE
 		{
+			BorderWithNone			= 0x00,
 			BorderWithOwnerLeft		= 0x01,
 			BorderWithOwnerTop		= 0x02,
 			BorderWithOwnerRight	= 0x04,
 			BorderWithOwnerBottom	= 0x08,
 			BorderWithSibling		= 0x10,
 		};
+		enum { BorderWithOwnerMask = 0x0f };
+
+		StateFlag	states;
 	};
 
 	enum class SnapGridType : DWORD

@@ -3,6 +3,8 @@
 #include "SnapWindowManager.h"
 #include "SnapPreviewWnd.h"
 #include <algorithm>
+#include <map>
+
 #undef min
 #undef max
 
@@ -288,6 +290,14 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 	// It is reasonable to assume that the active window must be the first child
 	ASSERT(pWndChild && pWndChild == msg.pHelper->GetWnd());
 	SnapTargetType targetType = SnapTargetType::Owner;
+
+	struct WndBorderInfo
+	{
+		size_t	rectIdx;	// points to m_vChildRects
+		bool	bFirst;		// first edge or the second
+	};
+	std::map<LONG, std::vector<WndBorderInfo>> wndWithSharedX, wndWithSharedY;
+
 	while (pWndChild)
 	{
 		if (pWndChild != msg.pHelper->GetWnd())
@@ -296,18 +306,24 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 			pWndChild->GetWindowRect(&childInfo.rect);
 			auto& rect = childInfo.rect;
 			if (rect.left == m_rcOwner.left)
-				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerLeft;
+				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerLeft);
+			else
+				wndWithSharedX[rect.left].push_back({ m_vChildRects.size(), true });
 			if (rect.top == m_rcOwner.top)
-				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerTop;
-			if (rect.right == m_rcOwner.right)
-				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerRight;
-			if (rect.bottom == m_rcOwner.bottom)
-				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerBottom;
-			if (childInfo.states)
+				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerTop);
+			else
+				wndWithSharedY[rect.top].push_back({ m_vChildRects.size(), true });
+			if (abs(rect.right - m_rcOwner.right) <= 1)
+				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerRight);
+			else
+				wndWithSharedX[rect.right].push_back({m_vChildRects.size(), false});
+			if (abs(rect.bottom - m_rcOwner.bottom) <= 1)
+				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerBottom);
+			else
+				wndWithSharedY[rect.bottom].push_back({m_vChildRects.size(), false});
+			if (childInfo.states != ChildWndInfo::StateFlag::BorderWithNone)
 			{
 				targetType = (SnapTargetType)((DWORD)targetType | (DWORD)SnapTargetType::Child);
-				// TEMP test
-				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithSibling;
 			}
 			m_vChildRects.emplace_back(childInfo);
 		}
@@ -316,6 +332,71 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 		{
 			TRACE("CSnapWindowManager some child windows are skipped to avoid lagging.\r\n");
 			break;
+		}
+	}
+	if (m_vChildRects.size() >= 2 && ((DWORD)targetType & (DWORD)SnapTargetType::Child))
+	{
+		for (auto& sharedX : wndWithSharedX)
+		{
+			auto& wnds = sharedX.second;
+			for (auto it1 = wnds.begin(); it1 != wnds.end(); ++it1)
+			{
+				auto& wnd1 = m_vChildRects[it1->rectIdx];
+				if (wnd1.states != ChildWndInfo::StateFlag::BorderWithNone)
+					continue;
+				for (auto it2 = std::next(it1); it2 != wnds.end(); ++it2)
+				{
+					auto& wnd2 = m_vChildRects[it2->rectIdx];
+					ChildWndInfo* pWnds[] = {&wnd1, &wnd2};
+					if (wnd1.rect.top > wnd2.rect.top)
+						std::swap(pWnds[0], pWnds[1]);
+					bool bSnapable = false;
+					if (it1->bFirst ^ it2->bFirst)
+					{
+						bSnapable = pWnds[1]->rect.top < pWnds[0]->rect.bottom;
+					}
+					else
+					{
+						bSnapable = pWnds[1]->rect.top == pWnds[0]->rect.bottom;
+					}
+					if (bSnapable)
+					{
+						wnd1.states = (ChildWndInfo::StateFlag)((BYTE)wnd1.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
+						wnd2.states = (ChildWndInfo::StateFlag)((BYTE)wnd2.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
+					}
+				}
+			}
+		}
+		for (auto& sharedY : wndWithSharedY)
+		{
+			auto& wnds = sharedY.second;
+			for (auto it1 = wnds.begin(); it1 != wnds.end(); ++it1)
+			{
+				auto& wnd1 = m_vChildRects[it1->rectIdx];
+				if (wnd1.states != ChildWndInfo::StateFlag::BorderWithNone)
+					continue;
+				for (auto it2 = std::next(it1); it2 != wnds.end(); ++it2)
+				{
+					auto& wnd2 = m_vChildRects[it2->rectIdx];
+					ChildWndInfo* pWnds[] = { &wnd1, &wnd2 };
+					if (wnd1.rect.left > wnd2.rect.left)
+						std::swap(pWnds[0], pWnds[1]);
+					bool bSnapable = false;
+					if (it1->bFirst ^ it2->bFirst)
+					{
+						bSnapable = pWnds[1]->rect.left < pWnds[0]->rect.right;
+					}
+					else
+					{
+						bSnapable = pWnds[1]->rect.left == pWnds[0]->rect.right;
+					}
+					if (bSnapable)
+					{
+						wnd1.states = (ChildWndInfo::StateFlag)((BYTE)wnd1.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
+						wnd2.states = (ChildWndInfo::StateFlag)((BYTE)wnd2.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
+					}
+				}
+			}
 		}
 	}
 	return targetType;
@@ -389,7 +470,7 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 		return grid;
 	for (auto& wnd : m_vChildRects)
 	{
-		if (wnd.states & (BYTE)ChildWndInfo::StateFlag::BorderWithSibling)
+		if (wnd.states != ChildWndInfo::StateFlag::BorderWithNone)
 		{
 			if (PtInRect(&wnd.rect, pt))
 				return GetSnapChildGridInfoEx(pt, wnd);
