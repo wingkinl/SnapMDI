@@ -166,6 +166,7 @@ protected:
 
 	UINT_PTR	m_nTimerIDSplit = 0;
 	int			m_nSplitHittest = HTNOWHERE;
+	CPoint		m_ptSplitCursorPos;
 
 	typedef std::map<UINT_PTR, CSnapWindowManager*> TimerMap;
 	static TimerMap	s_mapTimers;

@@ -478,10 +478,11 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 		return grid;
 	for (auto& wnd : m_vChildRects)
 	{
-		if (wnd.states != ChildWndInfo::StateFlag::BorderWithNone)
+		if (PtInRect(&wnd.rect, pt))
 		{
-			if (PtInRect(&wnd.rect, pt))
+			if (wnd.states != ChildWndInfo::StateFlag::BorderWithNone)
 				return GetSnapChildGridInfoEx(pt, wnd);
+			break;
 		}
 	}
 	return grid;
@@ -593,6 +594,12 @@ void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 	{
 		KillTimer(nIDEvent);
 		m_nTimerIDSplit = 0;
+		CPoint ptCurrent;
+		GetCursorPos(&ptCurrent);
+		if (m_ptSplitCursorPos == ptCurrent)
+		{
+			// TODO
+		}
 	}
 }
 
@@ -619,6 +626,7 @@ void CSnapWindowManager::HandleNCHitTest(SnapWndMsg& msg)
 	case HTTOP:
 	case HTRIGHT:
 	case HTBOTTOM:
+		m_ptSplitCursorPos = CPoint(msg.lp);
 		m_nTimerIDSplit = SetTimer(m_nTimerIDSplit, 100);
 		break;
 	}
