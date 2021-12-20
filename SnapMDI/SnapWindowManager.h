@@ -118,6 +118,8 @@ protected:
 	};
 	virtual SnapGridInfo GetSnapGridInfo(CPoint pt) const;
 
+	virtual BOOL IsSnappingApplicable(SnapTargetType target) const;
+
 	virtual SnapGridInfo GetSnapOwnerGridInfo(CPoint pt) const;
 
 	virtual SnapGridInfo GetSnapChildGridInfo(CPoint pt) const;

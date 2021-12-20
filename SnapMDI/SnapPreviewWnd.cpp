@@ -292,7 +292,10 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 void CSnapPreviewWnd::Hide()
 {
 	if (!IsWindowVisible())
-		return;
+	{
+		if (!m_nAniTimerID)
+			return;
+	}
 	if (ShouldDoAnimation())
 	{
 		m_aniStage = AnimateStage::Hiding;
@@ -301,6 +304,8 @@ void CSnapPreviewWnd::Hide()
 	}
 	else
 	{
+		// Must have no ongoing animation
+		ASSERT(m_nAniTimerID == 0);
 		ShowWindow(SW_HIDE);
 	}
 }

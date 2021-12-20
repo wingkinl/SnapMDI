@@ -293,7 +293,7 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerBottom;
 			if (childInfo.states)
 			{
-				targetType = SnapTargetType::Child;
+				targetType = (SnapTargetType)((DWORD)targetType | (DWORD)SnapTargetType::Child);
 				// TEMP test
 				childInfo.states |= (BYTE)ChildWndInfo::StateFlag::BorderWithSibling;
 			}
@@ -324,9 +324,18 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 	return { SnapGridType::None };
 }
 
+BOOL CSnapWindowManager::IsSnappingApplicable(SnapTargetType target) const
+{
+	if (GetKeyState(VK_SHIFT) < 0)
+		return false;
+	return true;
+}
+
 auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 {
 	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
+	if (!IsSnappingApplicable(SnapTargetType::Owner))
+		return grid;
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
 	szGrid.cy /= 2;
@@ -364,15 +373,14 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 {
 	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
-	if (GetKeyState(VK_SHIFT) < 0)
+	if (!IsSnappingApplicable(SnapTargetType::Child))
+		return grid;
+	for (auto& wnd : m_vChildRects)
 	{
-		for (auto& wnd : m_vChildRects)
+		if (wnd.states & (BYTE)ChildWndInfo::StateFlag::BorderWithSibling)
 		{
-			if (wnd.states & (BYTE)ChildWndInfo::StateFlag::BorderWithSibling)
-			{
-				if (PtInRect(&wnd.rect, pt))
-					return GetSnapChildGridInfoEx(pt, wnd);
-			}
+			if (PtInRect(&wnd.rect, pt))
+				return GetSnapChildGridInfoEx(pt, wnd);
 		}
 	}
 	return grid;
