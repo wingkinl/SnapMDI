@@ -407,6 +407,11 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 			}
 		}
 	}
+	if (GetTickCount() - startTime > 20)
+	{
+		// The code above is too slow, try to improve it
+		ASSERT(0);
+	}
 	return targetType;
 }
 

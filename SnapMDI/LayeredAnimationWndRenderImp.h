@@ -8,7 +8,7 @@ public:
 	CLayeredAnimationWndRenderImp() = default;
 	virtual ~CLayeredAnimationWndRenderImp() = default;
 
-	void AttachToALAWnd(CLayeredAnimationWnd* pWnd) { m_pALAWnd = pWnd; }
+	void AttachToLayeredAnimationWnd(CLayeredAnimationWnd* pWnd) { m_pALAWnd = pWnd; }
 
 	virtual BOOL Create(CWnd* pWndOwner) = 0;
 

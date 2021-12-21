@@ -92,6 +92,28 @@ public:
 		return FALSE;
 	}
 
+	void UpdateRoundedRectPath(Gdiplus::GraphicsPath& path, const CRect& rect, int diameter)
+	{
+		Gdiplus::Rect rcArc(rect.left, rect.top, diameter, diameter);
+
+		// top left arc  
+		path.AddArc(rcArc, 180, 90);
+
+		// top right arc  
+		rcArc.X = rect.right - diameter;
+		path.AddArc(rcArc, 270, 90);
+
+		// bottom right arc  
+		rcArc.Y = rect.bottom - diameter;
+		path.AddArc(rcArc, 0, 90);
+
+		// bottom left arc 
+		rcArc.X = rect.left;
+		path.AddArc(rcArc, 90, 90);
+
+		path.CloseFigure();
+	}
+
 	void OnAnimationUpdate() override
 	{
 		if (!m_bmp.GetSafeHandle())
@@ -122,32 +144,17 @@ public:
 			Gdiplus::Rect rc(rect.left, rect.top, rect.Width(), rect.Height());
 
 			Gdiplus::GraphicsPath path;
-
 			int diameter = GetSystemMetrics(SM_CXVSCROLL);
-			Gdiplus::Rect rcArc(rc.X, rc.Y, diameter, diameter);
-
-			// top left arc  
-			path.AddArc(rcArc, 180, 90);
-
-			// top right arc  
-			rcArc.X = rect.right - diameter;
-			path.AddArc(rcArc, 270, 90);
-
-			// bottom right arc  
-			rcArc.Y = rect.bottom - diameter;
-			path.AddArc(rcArc, 0, 90);
-
-			// bottom left arc 
-			rcArc.X = rect.left;
-			path.AddArc(rcArc, 90, 90);
-
-			path.CloseFigure();
+			UpdateRoundedRectPath(path, rect, diameter);
 
 			gg.FillPath(&brush, &path);
 
+			path.Reset();
+
 			brush.SetColor(color);
-			rc.Inflate(-diameter / 2, -diameter / 2);
-			gg.FillRectangle(&brush, rc);
+			rect.DeflateRect(diameter/2, diameter/2);
+			UpdateRoundedRectPath(path, rect, diameter);
+			gg.FillPath(&brush, &path);
 		}
 
 		BLENDFUNCTION bf;
@@ -243,7 +250,7 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 		break;
 	}
 	ASSERT(m_renderImp);
-	m_renderImp->AttachToALAWnd(this);
+	m_renderImp->AttachToLayeredAnimationWnd(this);
 	m_renderImp->Create(pWndOwner);
 }
 
