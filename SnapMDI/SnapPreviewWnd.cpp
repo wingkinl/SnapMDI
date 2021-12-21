@@ -15,7 +15,7 @@ public:
 
 	void OnAnimationUpdate() override
 	{
-		m_rect = ((CSnapPreviewWnd*)m_pALAWnd)->GetCurRect();
+		GetRect(m_rect, RectType::CurTarget);
 		m_pALAWnd->ScreenToClient(&m_rect);
 
 		m_pALAWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
@@ -78,7 +78,7 @@ public:
 		}
 	}
 private:
-	RECT	m_rect;
+	CRect	m_rect;
 	ComPtr<ID2D1SolidColorBrush>	m_brush;
 };
 
@@ -109,7 +109,8 @@ public:
 
 		CBitmap* pBitmapOld = (CBitmap*)dc.SelectObject(&m_bmp);
 
-		CRect rect = ((CSnapPreviewWnd*)m_pALAWnd)->GetCurRect();
+		CRect rect;
+		GetRect(rect, RectType::CurTarget);
 		m_pALAWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 		{
@@ -212,7 +213,6 @@ public:
 
 CSnapPreviewWnd::CSnapPreviewWnd()
 {
-	
 }
 
 void CSnapPreviewWnd::Create(CWnd* pWndOwner)
@@ -274,10 +274,10 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 {
 	m_rectTo = rect;
 	GetWindowInOwnerRect(m_rectTo);
+	ASSERT(!m_pActiveSnapWnd || m_pActiveSnapWnd == pActiveSnapWnd);
+	m_pActiveSnapWnd = pActiveSnapWnd;
 	if (ShouldDoAnimation())
 	{
-		ASSERT(!m_pActiveSnapWnd || m_pActiveSnapWnd == pActiveSnapWnd);
-		m_pActiveSnapWnd = pActiveSnapWnd;
 		if (IsWindowVisible())
 		{
 			m_rectFrom = m_rectCur;
@@ -292,7 +292,11 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 	}
 	else
 	{
-		RepositionWindow(rect);
+		if (m_renderImp)
+		{
+			m_rectCur = rect;
+			m_renderImp->OnAnimationUpdate();
+		}
 	}
 }
 

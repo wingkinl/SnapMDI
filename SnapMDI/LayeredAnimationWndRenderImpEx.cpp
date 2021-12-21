@@ -5,10 +5,11 @@
 
 void CLayeredAnimationWndRenderImp::StartRendering()
 {
-	CRect rect;
-	if (GetCanvas(rect))
+	CRect rcCanvas;
+	if (GetRect(rcCanvas, RectType::Canvas))
 	{
-		m_pALAWnd->SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),
+		ASSERT(!m_pALAWnd->IsWindowVisible());
+		m_pALAWnd->SetWindowPos(&CWnd::wndTop, rcCanvas.left, rcCanvas.top, rcCanvas.Width(), rcCanvas.Height(),
 			SWP_NOACTIVATE | SWP_NOREDRAW);
 	}
 }
@@ -18,11 +19,14 @@ void CLayeredAnimationWndRenderImp::StopRendering(bool bAbort)
 	//
 }
 
-BOOL CLayeredAnimationWndRenderImp::GetCanvas(CRect& rect) const
+BOOL CLayeredAnimationWndRenderImp::GetRect(CRect& rect, RectType type) const
 {
 	if (m_pALAWnd)
 	{
-		rect = m_pALAWnd->GetOwnerRect();
+		if (type == RectType::Canvas)
+			rect = m_pALAWnd->GetOwnerRect();
+		else if (type == RectType::CurTarget)
+			rect = m_pALAWnd->GetCurRect();
 		return TRUE;
 	}
 	ASSERT(0);
@@ -90,10 +94,10 @@ void CLayeredAnimationWndRenderImpAlpha::StartRendering()
 {
 	__super::StartRendering();
 
-	CRect rectOwner;
-	GetCanvas(rectOwner);
+	CRect rcCanvas;
+	GetRect(rcCanvas, RectType::Canvas);
 
-	CSize size(rectOwner.Size());
+	CSize size(rcCanvas.Size());
 	if (m_szBmp != size)
 	{
 		m_bmp.DeleteObject();

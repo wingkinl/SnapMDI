@@ -22,7 +22,12 @@ public:
 
 	virtual BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) { return FALSE; }
 
-	virtual BOOL GetCanvas(CRect& rect) const;
+	enum class RectType
+	{
+		Canvas,
+		CurTarget,
+	};
+	virtual BOOL GetRect(CRect& rect, RectType type) const;
 protected:
 	CLayeredAnimationWnd* m_pALAWnd = nullptr;
 };

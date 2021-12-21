@@ -28,9 +28,9 @@ public:
 	void EnableAnimation(bool val) { m_bEnableAnimation = val; }
 
 	const CRect& GetOwnerRect() const { return m_rcOwner; }
-protected:
-	void RepositionWindow(const CRect& rect);
 
+	virtual const CRect& GetCurRect() const { return m_rcOwner; }
+protected:
 	void GetWindowInOwnerRect(CRect& rect, CWnd* pWnd = nullptr) const;
 	void StopAnimation();
 

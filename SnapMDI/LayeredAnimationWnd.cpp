@@ -15,13 +15,6 @@ CLayeredAnimationWnd::~CLayeredAnimationWnd()
 {
 }
 
-void CLayeredAnimationWnd::RepositionWindow(const CRect& rect)
-{
-	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),
-		SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
-	RedrawWindow();
-}
-
 void CLayeredAnimationWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) const
 {
 	if (pWnd)

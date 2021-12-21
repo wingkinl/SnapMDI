@@ -18,7 +18,7 @@ public:
 	void ShowAt(CWnd* pActiveSnapWnd, const CRect& rect);
 	void Hide();
 
-	const CRect& GetCurRect() const { return m_rectCur; }
+	const CRect& GetCurRect() const override { return m_rectCur; }
 private:
 	void OnAnimationTo(const CRect& rect, bool bFinish);
 
