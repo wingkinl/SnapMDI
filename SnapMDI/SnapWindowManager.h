@@ -38,7 +38,7 @@ protected:
 
 	CSnapPreviewWnd* GetSnapPreview();
 
-	CGhostDividerWnd* GetGhostDividerWnd();
+	CGhostDividerWnd* GetGhostDividerWnd(bool bVertical);
 
 	void StartMoving(CSnapWindowHelper* pWndHelper);
 
@@ -145,14 +145,14 @@ private:
 	void HandleNCMouseMove(SnapWndMsg& msg);
 	void HandleNCMouseLeave(SnapWndMsg& msg);
 
-	void HideGhostDivider();
+	void HideGhostDivider(bool bVertical);
 protected:
 	friend class CSnapWindowHelper;
 
 	CWnd*	m_pWndOwner = nullptr;
 	CRect	m_rcOwner;
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
-	std::unique_ptr<CGhostDividerWnd>	m_wndGhostDividerWnd;
+	std::unique_ptr<CGhostDividerWnd>	m_wndGhostDividerWnd[2];
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
@@ -169,9 +169,9 @@ protected:
 	UINT_PTR	m_nTimerIDSnapSwitch = 0;
 	bool		m_bSwitchPressed = false;
 
+	// Delay showing of the divider in case mouse cursor leave the area very quickly
 	UINT_PTR	m_nTimerIDDelaySplit = 0;
 	int			m_nNCHittestRes = HTNOWHERE;
-	CPoint		m_ptNCHittestPos;
 
 	typedef std::map<UINT_PTR, CSnapWindowManager*> TimerMap;
 	static TimerMap	s_mapTimers;

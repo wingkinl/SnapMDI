@@ -24,7 +24,7 @@ void CGhostDividerRenderImpAlpha::HandlePaint()
 	CRect rect;
 	m_pWnd->GetClientRect(rect);
 
-	COLORREF crfFill = RGB(66, 143, 222);
+	COLORREF crfFill = RGB(45, 100, 63);
 
 	CBrush brFill(crfFill);
 
@@ -42,9 +42,9 @@ void CGhostDividerRenderImpAlpha::OnAnimationUpdate()
 
 }
 
-CGhostDividerWnd::CGhostDividerWnd()
+CGhostDividerWnd::CGhostDividerWnd(BOOL bVertical)
 {
-
+	m_bVertical = bVertical;
 }
 
 void CGhostDividerWnd::Create(CWnd* pWndOwner)
@@ -65,9 +65,19 @@ BOOL CGhostDividerWnd::PreCreateWindow(CREATESTRUCT& cs)
 	return __super::PreCreateWindow(cs);
 }
 
-void CGhostDividerWnd::Show(const CRect& rect, bool bVertical)
+void CGhostDividerWnd::Show(const POINT& pos, LONG length)
 {
 	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW;
+	int cx = GetSystemMetrics(m_bVertical ? SM_CXVSCROLL : SM_CYHSCROLL);
+	CSize szInflate(cx/2, 0);
+	CSize size(0, length);
+	if (!m_bVertical)
+	{
+		std::swap(szInflate.cx, szInflate.cy);
+		std::swap(size.cx, size.cy);
+	}
+	CRect rect(pos, size);
+	rect.InflateRect(szInflate);
 	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), nFlags);
 	if (ShouldDoAnimation())
 	{

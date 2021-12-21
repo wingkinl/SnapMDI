@@ -113,14 +113,15 @@ CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
 	return m_wndSnapPreview.get();
 }
 
-CGhostDividerWnd* CSnapWindowManager::GetGhostDividerWnd()
+CGhostDividerWnd* CSnapWindowManager::GetGhostDividerWnd(bool bVertical)
 {
-	if (!m_wndGhostDividerWnd)
+	auto& wnd = m_wndGhostDividerWnd[bVertical];
+	if (!wnd)
 	{
-		m_wndGhostDividerWnd.reset(new CGhostDividerWnd());
-		m_wndGhostDividerWnd->Create(m_pWndOwner);
+		wnd.reset(new CGhostDividerWnd(bVertical));
+		wnd->Create(m_pWndOwner);
 	}
-	return m_wndGhostDividerWnd.get();
+	return wnd.get();
 }
 
 void CSnapWindowManager::PreSnapInitialize()
@@ -602,16 +603,16 @@ void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 	}
 	else if (nIDEvent == m_nTimerIDDelaySplit)
 	{
-		TRACE("Split timer %u\r\n", GetTickCount());
 		KillTimer(nIDEvent);
 		m_nTimerIDDelaySplit = 0;
-		auto pWnd = GetGhostDividerWnd();
+		bool bVertical = m_nNCHittestRes == HTLEFT || m_nNCHittestRes == HTRIGHT;
+		auto pWnd = GetGhostDividerWnd(bVertical);
 		if (pWnd)
 		{
-			m_pWndOwner->GetClientRect(&m_rcOwner);
-			m_pWndOwner->ClientToScreen(&m_rcOwner);
-			m_rcOwner.right = m_rcOwner.left + 50;
-			pWnd->Show(m_rcOwner, true);
+			CRect rect;
+			m_pWndOwner->GetClientRect(&rect);
+			m_pWndOwner->ClientToScreen(&rect);
+			pWnd->Show(rect.TopLeft(), 200);
 		}
 	}
 }
@@ -647,16 +648,14 @@ void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 	}
 	if (bShowDivider)
 	{
-		CPoint pt(msg.lp);
 		if (!bSameHit)
 		{
-			m_ptNCHittestPos = pt;
-			m_nTimerIDDelaySplit = SetTimer(m_nTimerIDDelaySplit, 150);
+			m_nTimerIDDelaySplit = SetTimer(0, 150);
 		}
 	}
 	else
 	{
-		HideGhostDivider();
+		HideGhostDivider(true);
 	}
 }
 
@@ -667,16 +666,17 @@ void CSnapWindowManager::HandleNCMouseLeave(SnapWndMsg& msg)
 		KillTimer(m_nTimerIDDelaySplit);
 		m_nTimerIDDelaySplit = 0;
 	}
-	HideGhostDivider();
+	HideGhostDivider(true);
+	HideGhostDivider(false);
 }
 
-void CSnapWindowManager::HideGhostDivider()
+void CSnapWindowManager::HideGhostDivider(bool bVertical)
 {
 	m_nNCHittestRes = HTNOWHERE;
-	if (m_wndGhostDividerWnd && m_wndGhostDividerWnd->IsWindowVisible())
+	auto& wnd = m_wndGhostDividerWnd[bVertical];
+	if (wnd && wnd->IsWindowVisible())
 	{
-		m_ptNCHittestPos = { -1, -1 };
-		m_wndGhostDividerWnd->Hide();
+		wnd->Hide();
 	}
 }
 
