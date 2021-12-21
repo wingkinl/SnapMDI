@@ -320,22 +320,22 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 			pWndChild->GetWindowRect(&childInfo.rect);
 			auto& rect = childInfo.rect;
 			if (rect.left == m_rcOwner.left)
-				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerLeft);
+				childInfo.bBorderWithOwner = true;
 			else
 				wndWithSharedX[rect.left].push_back({ m_vChildRects.size(), true });
 			if (rect.top == m_rcOwner.top)
-				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerTop);
+				childInfo.bBorderWithOwner = true;
 			else
 				wndWithSharedY[rect.top].push_back({ m_vChildRects.size(), true });
 			if (abs(rect.right - m_rcOwner.right) <= 1)
-				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerRight);
+				childInfo.bBorderWithOwner = true;
 			else
 				wndWithSharedX[rect.right].push_back({m_vChildRects.size(), false});
 			if (abs(rect.bottom - m_rcOwner.bottom) <= 1)
-				childInfo.states = (ChildWndInfo::StateFlag)((BYTE)childInfo.states | (BYTE)ChildWndInfo::StateFlag::BorderWithOwnerBottom);
+				childInfo.bBorderWithOwner = true;
 			else
 				wndWithSharedY[rect.bottom].push_back({m_vChildRects.size(), false});
-			if (childInfo.states != ChildWndInfo::StateFlag::BorderWithNone)
+			if (childInfo.bBorderWithOwner)
 			{
 				targetType = (SnapTargetType)((DWORD)targetType | (DWORD)SnapTargetType::Child);
 			}
@@ -356,7 +356,7 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 			for (auto it1 = wnds.begin(); it1 != wnds.end(); ++it1)
 			{
 				auto& wnd1 = m_vChildRects[it1->rectIdx];
-				if (wnd1.states != ChildWndInfo::StateFlag::BorderWithNone)
+				if (wnd1.bBorderWithOwner || wnd1.bBorderWithSibling)
 					continue;
 				for (auto it2 = std::next(it1); it2 != wnds.end(); ++it2)
 				{
@@ -375,8 +375,8 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 					}
 					if (bSnapable)
 					{
-						wnd1.states = (ChildWndInfo::StateFlag)((BYTE)wnd1.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
-						wnd2.states = (ChildWndInfo::StateFlag)((BYTE)wnd2.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
+						wnd1.bBorderWithSibling = true;
+						wnd2.bBorderWithSibling = true;
 					}
 				}
 			}
@@ -387,7 +387,7 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 			for (auto it1 = wnds.begin(); it1 != wnds.end(); ++it1)
 			{
 				auto& wnd1 = m_vChildRects[it1->rectIdx];
-				if (wnd1.states != ChildWndInfo::StateFlag::BorderWithNone)
+				if (wnd1.bBorderWithOwner || wnd1.bBorderWithSibling)
 					continue;
 				for (auto it2 = std::next(it1); it2 != wnds.end(); ++it2)
 				{
@@ -406,8 +406,8 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 					}
 					if (bSnapable)
 					{
-						wnd1.states = (ChildWndInfo::StateFlag)((BYTE)wnd1.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
-						wnd2.states = (ChildWndInfo::StateFlag)((BYTE)wnd2.states | (BYTE)ChildWndInfo::StateFlag::BorderWithSibling);
+						wnd1.bBorderWithSibling = true;
+						wnd2.bBorderWithSibling = true;
 					}
 				}
 			}
@@ -491,7 +491,7 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 	{
 		if (PtInRect(&wnd.rect, pt))
 		{
-			if (wnd.states != ChildWndInfo::StateFlag::BorderWithNone)
+			if (wnd.bBorderWithOwner || wnd.bBorderWithSibling)
 				return GetSnapChildGridInfoEx(pt, wnd);
 			break;
 		}
