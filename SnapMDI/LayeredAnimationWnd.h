@@ -50,7 +50,6 @@ protected:
 	// Attributes
 protected:
 	CWnd*		m_pWndOwner = nullptr;
-	CWnd*		m_pActiveSnapWnd = nullptr;
 	CRect		m_rcOwner;
 	RenderTech	m_tech = RenderTech::DirectComposition;
 	bool		m_bEnableAnimation = true;

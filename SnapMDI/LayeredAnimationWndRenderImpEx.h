@@ -19,11 +19,7 @@ using namespace D2D1;
 class CLayeredAnimationWndRenderImpInvert : public CLayeredAnimationWndRenderImp
 {
 public:
-	BOOL Create(CWnd* pWndOwner) override;
-
-	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
-private:
-	virtual void HandlePaint() {}
+	void HandlePaint() override;
 };
 
 
@@ -32,16 +28,21 @@ class CLayeredAnimationWndRenderImpAlpha : public CLayeredAnimationWndRenderImp
 public:
 	~CLayeredAnimationWndRenderImpAlpha();
 
+	static BOOL IsApplicable()
+	{
+		if (GetGlobalData()->m_nBitsPerPixel > 8)
+			return TRUE;
+		return FALSE;
+	}
+
 	BOOL Create(CWnd* pWndOwner) override;
 
 	BOOL CanSupportAnimation() const override;
 
 	void StartRendering() override;
 
-	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
+	static void UpdateRoundedRectPath(Gdiplus::GraphicsPath& path, const CRect& rect, int diameter);
 protected:
-	virtual void HandlePaint() = 0;
-
 	virtual bool NeedGDIPlus() const { return true; }
 
 	CBitmap	m_bmp;
@@ -102,8 +103,6 @@ public:
 	BOOL CanSupportAnimation() const override;
 
 	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
-
-	virtual void HandlePaint() = 0;
 
 	void HandleSize(WPARAM wparam, LPARAM lparam);
 

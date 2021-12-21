@@ -3,13 +3,24 @@
 #include "LayeredAnimationWndRenderImpEx.h"
 #include "LayeredAnimationWnd.h"
 
+BOOL CLayeredAnimationWndRenderImp::Create(CWnd* pWndOwner)
+{
+	CRect rect;
+	rect.SetRectEmpty();
+
+	DWORD dwStyle = WS_POPUP;
+	DWORD dwExStyle = 0;
+	UINT nClassStyle = CS_HREDRAW | CS_VREDRAW;
+	return m_pWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+}
+
 void CLayeredAnimationWndRenderImp::StartRendering()
 {
 	CRect rcCanvas;
 	if (GetRect(rcCanvas, RectType::Canvas))
 	{
-		ASSERT(!m_pALAWnd->IsWindowVisible());
-		m_pALAWnd->SetWindowPos(&CWnd::wndTop, rcCanvas.left, rcCanvas.top, rcCanvas.Width(), rcCanvas.Height(),
+		ASSERT(!m_pWnd->IsWindowVisible());
+		m_pWnd->SetWindowPos(&CWnd::wndTop, rcCanvas.left, rcCanvas.top, rcCanvas.Width(), rcCanvas.Height(),
 			SWP_NOACTIVATE | SWP_NOREDRAW);
 	}
 }
@@ -19,32 +30,7 @@ void CLayeredAnimationWndRenderImp::StopRendering(bool bAbort)
 	//
 }
 
-BOOL CLayeredAnimationWndRenderImp::GetRect(CRect& rect, RectType type) const
-{
-	if (m_pALAWnd)
-	{
-		if (type == RectType::Canvas)
-			rect = m_pALAWnd->GetOwnerRect();
-		else if (type == RectType::CurTarget)
-			rect = m_pALAWnd->GetCurRect();
-		return TRUE;
-	}
-	ASSERT(0);
-	return FALSE;
-}
-
-BOOL CLayeredAnimationWndRenderImpInvert::Create(CWnd* pWndOwner)
-{
-	CRect rect;
-	rect.SetRectEmpty();
-
-	DWORD dwStyle = WS_POPUP;
-	DWORD dwExStyle = 0;
-	UINT nClassStyle = CS_HREDRAW | CS_VREDRAW;
-	return m_pALAWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
-}
-
-BOOL CLayeredAnimationWndRenderImpInvert::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+BOOL CLayeredAnimationWndRenderImp::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 {
 	switch (message)
 	{
@@ -55,6 +41,43 @@ BOOL CLayeredAnimationWndRenderImpInvert::OnWndMsg(UINT message, WPARAM wParam, 
 	return FALSE;
 }
 
+
+BOOL CLayeredAnimationWndRenderImp::GetRect(CRect& rect, RectType type) const
+{
+	if (m_pWnd)
+	{
+		if (type == RectType::Canvas)
+			rect = m_pWnd->GetOwnerRect();
+		else if (type == RectType::CurTarget)
+			rect = m_pWnd->GetCurRect();
+		return TRUE;
+	}
+	ASSERT(0);
+	return FALSE;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+void CLayeredAnimationWndRenderImpInvert::HandlePaint()
+{
+	CPaintDC dc(m_pWnd);
+
+	CRect rect;
+	m_pWnd->GetClientRect(rect);
+
+	COLORREF colorFill = RGB(47, 103, 190);
+
+	CBrush brFill(CDrawingManager::PixelAlpha(RGB(255 - GetRValue(colorFill), 255 - GetGValue(colorFill), 255 - GetBValue(colorFill)), 50));
+
+	CBrush* pBrushOld = dc.SelectObject(&brFill);
+	dc.PatBlt(0, 0, rect.Width(), rect.Height(), PATINVERT);
+	dc.SelectObject(pBrushOld);
+}
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 CLayeredAnimationWndRenderImpAlpha::~CLayeredAnimationWndRenderImpAlpha()
 {
 	if (m_bGDIPlusStarted)
@@ -71,7 +94,7 @@ BOOL CLayeredAnimationWndRenderImpAlpha::Create(CWnd* pWndOwner)
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = WS_EX_LAYERED;
 	UINT nClassStyle = 0;
-	BOOL bOK = m_pALAWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+	BOOL bOK = m_pWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
 
 	if (bOK)
 	{
@@ -113,15 +136,26 @@ void CLayeredAnimationWndRenderImpAlpha::StartRendering()
 	}
 }
 
-BOOL CLayeredAnimationWndRenderImpAlpha::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+void CLayeredAnimationWndRenderImpAlpha::UpdateRoundedRectPath(Gdiplus::GraphicsPath& path, const CRect& rect, int diameter)
 {
-	switch (message)
-	{
-	case WM_PAINT:
-		HandlePaint();
-		break;
-	}
-	return FALSE;
+	Gdiplus::Rect rcArc(rect.left, rect.top, diameter, diameter);
+
+	// top left arc  
+	path.AddArc(rcArc, 180, 90);
+
+	// top right arc  
+	rcArc.X = rect.right - diameter;
+	path.AddArc(rcArc, 270, 90);
+
+	// bottom right arc  
+	rcArc.Y = rect.bottom - diameter;
+	path.AddArc(rcArc, 0, 90);
+
+	// bottom left arc 
+	rcArc.X = rect.left;
+	path.AddArc(rcArc, 90, 90);
+
+	path.CloseFigure();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -182,7 +216,7 @@ BOOL CLayeredAnimationWndRenderImpDirectComposition::Create(CWnd* pWndOwner)
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = WS_EX_NOREDIRECTIONBITMAP;
 	UINT nClassStyle = 0;
-	BOOL bOK = m_pALAWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+	BOOL bOK = m_pWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
 
 	return bOK;
 }
@@ -231,13 +265,13 @@ void CLayeredAnimationWndRenderImpDirectComposition::CreateDeviceResources()
 		__uuidof(m_device),
 		reinterpret_cast<void**>(m_device.ReleaseAndGetAddressOf())));
 
-	auto hWnd = m_pALAWnd->GetSafeHwnd();
+	auto hWnd = m_pWnd->GetSafeHwnd();
 	HR(m_device->CreateTargetForHwnd(hWnd,
 		true, // Top most
 		m_target.ReleaseAndGetAddressOf()));
 	HR(m_device->CreateVisual(m_visual.ReleaseAndGetAddressOf()));
 	RECT rect = {};
-	m_pALAWnd->GetClientRect(&rect);
+	m_pWnd->GetClientRect(&rect);
 
 	HR(m_device->CreateSurface(rect.right - rect.left,
 		rect.bottom - rect.top,
@@ -290,9 +324,6 @@ BOOL CLayeredAnimationWndRenderImpDirectComposition::OnWndMsg(UINT message, WPAR
 {
 	switch (message)
 	{
-	case WM_PAINT:
-		HandlePaint();
-		break;
 	case WM_SIZE:
 		HandleSize(wParam, lParam);
 		break;
@@ -300,12 +331,7 @@ BOOL CLayeredAnimationWndRenderImpDirectComposition::OnWndMsg(UINT message, WPAR
 		HandleDPIChanged(wParam, lParam);
 		break;
 	}
-	return FALSE;
-}
-
-void CLayeredAnimationWndRenderImpDirectComposition::HandlePaint()
-{
-
+	return __super::OnWndMsg(message, wParam, lParam, pResult);
 }
 
 void CLayeredAnimationWndRenderImpDirectComposition::HandleSize(WPARAM wparam, LPARAM lparam)
@@ -339,7 +365,7 @@ void CLayeredAnimationWndRenderImpDirectComposition::HandleDPIChanged(WPARAM wPa
 	m_dpi.x = LOWORD(wParam);
 	m_dpi.y = HIWORD(wParam);
 	RECT const& rect = *reinterpret_cast<RECT const*>(lParam);
-	VERIFY(m_pALAWnd->SetWindowPos(
+	VERIFY(m_pWnd->SetWindowPos(
 		&CWnd::wndTop,
 		rect.left,
 		rect.top,

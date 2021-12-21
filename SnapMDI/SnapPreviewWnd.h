@@ -24,8 +24,8 @@ private:
 
 	void OnAnimationTimer(double timeDiff) override;
 private:
-	bool		m_bStartedSnapping = false;
-	CRect		m_rectCur;
-	CRect		m_rectFrom;
-	CRect		m_rectTo;
+	CWnd*	m_pActiveSnapWnd = nullptr;
+	CRect	m_rectCur;
+	CRect	m_rectFrom;
+	CRect	m_rectTo;
 };

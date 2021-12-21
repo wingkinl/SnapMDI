@@ -60,6 +60,9 @@
     <ClInclude Include="LayeredAnimationWndRenderImpEx.h">
       <Filter>SnapInChild</Filter>
     </ClInclude>
+    <ClInclude Include="GhostDividerWnd.h">
+      <Filter>SnapInChild</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SnapMDI.cpp">
@@ -90,6 +93,9 @@
       <Filter>SnapInChild</Filter>
     </ClCompile>
     <ClCompile Include="LayeredAnimationWndRenderImpEx.cpp">
+      <Filter>SnapInChild</Filter>
+    </ClCompile>
+    <ClCompile Include="GhostDividerWnd.cpp">
       <Filter>SnapInChild</Filter>
     </ClCompile>
   </ItemGroup>

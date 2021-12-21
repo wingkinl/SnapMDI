@@ -183,6 +183,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="GhostDividerWnd.h" />
     <ClInclude Include="LayeredAnimationWndRenderImp.h" />
     <ClInclude Include="LayeredAnimationWndRenderImpEx.h" />
     <ClInclude Include="LayeredAnimationWnd.h" />
@@ -199,6 +200,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GhostDividerWnd.cpp" />
     <ClCompile Include="LayeredAnimationWndRenderImpEx.cpp" />
     <ClCompile Include="LayeredAnimationWnd.cpp" />
     <ClCompile Include="ChildFrm.cpp" />

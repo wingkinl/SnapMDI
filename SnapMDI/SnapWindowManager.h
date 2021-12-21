@@ -5,6 +5,7 @@
 #include <map>
 
 class CSnapPreviewWnd;
+class CGhostDividerWnd;
 class CSnapWindowHelper;
 
 struct SnapWndMsg
@@ -35,9 +36,9 @@ public:
 protected:
 	SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg);
 
-	LRESULT PostWndMsg(SnapWndMsg& msg);
-
 	CSnapPreviewWnd* GetSnapPreview();
+
+	CGhostDividerWnd* GetGhostDividerWnd();
 
 	void StartMoving(CSnapWindowHelper* pWndHelper);
 
@@ -141,13 +142,17 @@ private:
 	UINT_PTR SetTimer(UINT_PTR nID, UINT uElapse);
 	void KillTimer(UINT_PTR nID);
 
-	void HandleNCHitTest(SnapWndMsg& msg);
+	void HandleNCMouseMove(SnapWndMsg& msg);
+	void HandleNCMouseLeave(SnapWndMsg& msg);
+
+	void HideGhostDivider();
 protected:
 	friend class CSnapWindowHelper;
 
 	CWnd*	m_pWndOwner = nullptr;
 	CRect	m_rcOwner;
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
+	std::unique_ptr<CGhostDividerWnd>	m_wndGhostDividerWnd;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
@@ -164,9 +169,9 @@ protected:
 	UINT_PTR	m_nTimerIDSnapSwitch = 0;
 	bool		m_bSwitchPressed = false;
 
-	UINT_PTR	m_nTimerIDSplit = 0;
-	int			m_nSplitHittest = HTNOWHERE;
-	CPoint		m_ptSplitCursorPos;
+	UINT_PTR	m_nTimerIDDelaySplit = 0;
+	int			m_nNCHittestRes = HTNOWHERE;
+	CPoint		m_ptNCHittestPos;
 
 	typedef std::map<UINT_PTR, CSnapWindowManager*> TimerMap;
 	static TimerMap	s_mapTimers;
@@ -196,7 +201,8 @@ public:
 	}
 	inline LRESULT PostWndMsg(SnapWndMsg& msg)
 	{
-		return m_pManager->PostWndMsg(msg);
+		//return m_pManager->PostWndMsg(msg);
+		return 0;
 	}
 protected:
 	CSnapWindowManager* m_pManager = nullptr;

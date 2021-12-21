@@ -16,11 +16,11 @@ public:
 	void OnAnimationUpdate() override
 	{
 		GetRect(m_rect, RectType::CurTarget);
-		m_pALAWnd->ScreenToClient(&m_rect);
+		m_pWnd->ScreenToClient(&m_rect);
 
-		m_pALAWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
+		m_pWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
 			SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
-		m_pALAWnd->RedrawWindow();
+		m_pWnd->RedrawWindow();
 	}
 
 	void HandlePaint() override
@@ -70,7 +70,7 @@ public:
 
 			HR(m_surface->EndDraw());
 			HR(m_device->Commit());
-			m_pALAWnd->ValidateRect(nullptr);
+			m_pWnd->ValidateRect(nullptr);
 		}
 		catch (ComException const&)
 		{
@@ -85,47 +85,18 @@ private:
 class CSnapPreviewRenderImpAlpha : public CLayeredAnimationWndRenderImpAlpha
 {
 public:
-	static BOOL IsApplicable()
-	{
-		if (GetGlobalData()->m_nBitsPerPixel > 8)
-			return TRUE;
-		return FALSE;
-	}
-
-	void UpdateRoundedRectPath(Gdiplus::GraphicsPath& path, const CRect& rect, int diameter)
-	{
-		Gdiplus::Rect rcArc(rect.left, rect.top, diameter, diameter);
-
-		// top left arc  
-		path.AddArc(rcArc, 180, 90);
-
-		// top right arc  
-		rcArc.X = rect.right - diameter;
-		path.AddArc(rcArc, 270, 90);
-
-		// bottom right arc  
-		rcArc.Y = rect.bottom - diameter;
-		path.AddArc(rcArc, 0, 90);
-
-		// bottom left arc 
-		rcArc.X = rect.left;
-		path.AddArc(rcArc, 90, 90);
-
-		path.CloseFigure();
-	}
-
 	void OnAnimationUpdate() override
 	{
 		if (!m_bmp.GetSafeHandle())
 			return;
 		CRect rectClient;
-		m_pALAWnd->GetClientRect(rectClient);
+		m_pWnd->GetClientRect(rectClient);
 
 		CPoint point(0, 0);
 		CSize size(rectClient.Size());
 		ASSERT(size == m_szBmp);
 
-		CClientDC clientDC(m_pALAWnd);
+		CClientDC clientDC(m_pWnd);
 		CDC dc;
 		dc.CreateCompatibleDC(&clientDC);
 
@@ -133,7 +104,7 @@ public:
 
 		CRect rect;
 		GetRect(rect, RectType::CurTarget);
-		m_pALAWnd->ScreenToClient(rect);
+		m_pWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 		{
 			COLORREF crfFill = RGB(66, 143, 222);
@@ -163,23 +134,23 @@ public:
 		bf.SourceConstantAlpha = 255;
 		bf.AlphaFormat = LWA_COLORKEY;
 
-		m_pALAWnd->UpdateLayeredWindow(NULL, 0, &size, &dc, &point, 0, &bf, ULW_ALPHA);
+		m_pWnd->UpdateLayeredWindow(NULL, 0, &size, &dc, &point, 0, &bf, ULW_ALPHA);
 
 		dc.SelectObject(pBitmapOld);
 
-		if (!m_pALAWnd->IsWindowVisible())
+		if (!m_pWnd->IsWindowVisible())
 		{
-			m_pALAWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
+			m_pWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
 				SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
 		}
 	}
 
 	void HandlePaint() override
 	{
-		CPaintDC dc(m_pALAWnd);
+		CPaintDC dc(m_pWnd);
 
 		CRect rect;
-		m_pALAWnd->GetClientRect(rect);
+		m_pWnd->GetClientRect(rect);
 
 		COLORREF crfFill = RGB(66, 143, 222);
 
@@ -195,26 +166,6 @@ public:
 
 		dc.SelectObject(oldBrush);
 		dc.SelectObject(oldPen);
-	}
-};
-
-class CSnapPreviewRenderImpInvert : public CLayeredAnimationWndRenderImpInvert
-{
-public:
-	void HandlePaint() override
-	{
-		CPaintDC dc(m_pALAWnd);
-
-		CRect rect;
-		m_pALAWnd->GetClientRect(rect);
-
-		COLORREF colorFill = RGB(47, 103, 190);
-
-		CBrush brFill(CDrawingManager::PixelAlpha(RGB(255 - GetRValue(colorFill), 255 - GetGValue(colorFill), 255 - GetBValue(colorFill)), 50));
-
-		CBrush* pBrushOld = dc.SelectObject(&brFill);
-		dc.PatBlt(0, 0, rect.Width(), rect.Height(), PATINVERT);
-		dc.SelectObject(pBrushOld);
 	}
 };
 
@@ -236,17 +187,17 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 		}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
-		if (CSnapPreviewRenderImpAlpha::IsApplicable())
+		if (CLayeredAnimationWndRenderImpAlpha::IsApplicable())
 		{
 			m_tech = RenderTech::AlphaBlendedLayer;
 			m_renderImp = std::make_shared<CSnapPreviewRenderImpAlpha>();
 			break;
 		}
 	case RenderTech::InvertColor:
-	default:
 		// fall through
+	default:
 		m_tech = RenderTech::InvertColor;
-		m_renderImp = std::make_shared<CSnapPreviewRenderImpInvert>();
+		m_renderImp = std::make_shared<CLayeredAnimationWndRenderImpInvert>();
 		break;
 	}
 	ASSERT(m_renderImp);
@@ -257,7 +208,6 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 void CSnapPreviewWnd::StartSnapping()
 {
 	ASSERT(m_pWndOwner && !IsWindowVisible());
-	m_bStartedSnapping = true;
 	m_pWndOwner->GetClientRect(&m_rcOwner);
 	m_pWndOwner->ClientToScreen(&m_rcOwner);
 	if (m_renderImp)
@@ -268,12 +218,12 @@ void CSnapPreviewWnd::StartSnapping()
 
 void CSnapPreviewWnd::StopSnapping(bool bAbort)
 {
-	m_bStartedSnapping = false;
 	if (m_renderImp)
 	{
 		m_renderImp->StopRendering(bAbort);
 		m_aniStage = AnimateStage::Hiding;
 		FinishAnimationCleanup();
+		m_pActiveSnapWnd = nullptr;
 	}
 }
 
@@ -337,6 +287,8 @@ void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
 	}
 	if (bFinish)
 	{
+		if (m_aniStage == AnimateStage::Hiding)
+			m_pActiveSnapWnd = nullptr;
 		FinishAnimationCleanup();
 	}
 }

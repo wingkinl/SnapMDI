@@ -40,7 +40,6 @@ void CLayeredAnimationWnd::FinishAnimationCleanup()
 	if (m_aniStage != AnimateStage::Showing)
 	{
 		ShowWindow(SW_HIDE);
-		m_pActiveSnapWnd = nullptr;
 		m_aniStage = AnimateStage::Ready;
 	}
 }

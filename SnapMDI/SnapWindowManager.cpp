@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "SnapWindowManager.h"
 #include "SnapPreviewWnd.h"
+#include "GhostDividerWnd.h"
 #include <algorithm>
 
 #undef min
@@ -92,21 +93,14 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 		if (m_bCheckMoveAbortion)
 			m_bAborted = TRUE;
 		break;
-	case WM_NCHITTEST:
-		return SnapWndMsg::HandleResult::NeedPostWndMsg;
-	}
-	return SnapWndMsg::HandleResult::Continue;
-}
-
-LRESULT CSnapWindowManager::PostWndMsg(SnapWndMsg& msg)
-{
-	switch (msg.message)
-	{
-	case WM_NCHITTEST:
-		HandleNCHitTest(msg);
+	case WM_NCMOUSEMOVE:
+		HandleNCMouseMove(msg);
+		break;
+	case WM_NCMOUSELEAVE:
+		HandleNCMouseLeave(msg);
 		break;
 	}
-	return msg.result;
+	return SnapWndMsg::HandleResult::Continue;
 }
 
 CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
@@ -117,6 +111,16 @@ CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
 		m_wndSnapPreview->Create(m_pWndOwner);
 	}
 	return m_wndSnapPreview.get();
+}
+
+CGhostDividerWnd* CSnapWindowManager::GetGhostDividerWnd()
+{
+	if (!m_wndGhostDividerWnd)
+	{
+		m_wndGhostDividerWnd.reset(new CGhostDividerWnd());
+		m_wndGhostDividerWnd->Create(m_pWndOwner);
+	}
+	return m_wndGhostDividerWnd.get();
 }
 
 void CSnapWindowManager::PreSnapInitialize()
@@ -286,6 +290,12 @@ BOOL CSnapWindowManager::EnterSnapping(const SnapWndMsg& msg) const
 	return TRUE;
 }
 
+struct WndBorderInfo
+{
+	size_t	rectIdx;	// points to m_vChildRects
+	bool	bFirst;		// first edge or the second
+};
+
 auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 {
 	m_pWndOwner->GetClientRect(&m_rcOwner);
@@ -299,11 +309,6 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 	ASSERT(pWndChild && pWndChild == msg.pHelper->GetWnd());
 	SnapTargetType targetType = SnapTargetType::Owner;
 
-	struct WndBorderInfo
-	{
-		size_t	rectIdx;	// points to m_vChildRects
-		bool	bFirst;		// first edge or the second
-	};
 	std::map<LONG, std::vector<WndBorderInfo>> wndWithSharedX, wndWithSharedY;
 
 	while (pWndChild)
@@ -595,15 +600,18 @@ void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 			m_bSwitchPressed = bSwitchKeyPressed;
 		}
 	}
-	else if (nIDEvent == m_nTimerIDSplit)
+	else if (nIDEvent == m_nTimerIDDelaySplit)
 	{
+		TRACE("Split timer %u\r\n", GetTickCount());
 		KillTimer(nIDEvent);
-		m_nTimerIDSplit = 0;
-		CPoint ptCurrent;
-		GetCursorPos(&ptCurrent);
-		if (m_ptSplitCursorPos == ptCurrent)
+		m_nTimerIDDelaySplit = 0;
+		auto pWnd = GetGhostDividerWnd();
+		if (pWnd)
 		{
-			// TODO
+			m_pWndOwner->GetClientRect(&m_rcOwner);
+			m_pWndOwner->ClientToScreen(&m_rcOwner);
+			m_rcOwner.right = m_rcOwner.left + 50;
+			pWnd->Show(m_rcOwner, true);
 		}
 	}
 }
@@ -623,17 +631,52 @@ void CSnapWindowManager::KillTimer(UINT_PTR nID)
 	s_mapTimers.erase(nID);
 }
 
-void CSnapWindowManager::HandleNCHitTest(SnapWndMsg& msg)
+void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 {
-	switch (msg.result)
+	bool bSameHit = m_nNCHittestRes == (int)msg.wp;
+	m_nNCHittestRes = (int)msg.wp;
+	bool bShowDivider = false;
+	switch (msg.wp)
 	{
 	case HTLEFT:
 	case HTTOP:
 	case HTRIGHT:
 	case HTBOTTOM:
-		m_ptSplitCursorPos = CPoint(msg.lp);
-		m_nTimerIDSplit = SetTimer(m_nTimerIDSplit, 100);
+		bShowDivider = true;
 		break;
+	}
+	if (bShowDivider)
+	{
+		CPoint pt(msg.lp);
+		if (!bSameHit)
+		{
+			m_ptNCHittestPos = pt;
+			m_nTimerIDDelaySplit = SetTimer(m_nTimerIDDelaySplit, 150);
+		}
+	}
+	else
+	{
+		HideGhostDivider();
+	}
+}
+
+void CSnapWindowManager::HandleNCMouseLeave(SnapWndMsg& msg)
+{
+	if (m_nTimerIDDelaySplit)
+	{
+		KillTimer(m_nTimerIDDelaySplit);
+		m_nTimerIDDelaySplit = 0;
+	}
+	HideGhostDivider();
+}
+
+void CSnapWindowManager::HideGhostDivider()
+{
+	m_nNCHittestRes = HTNOWHERE;
+	if (m_wndGhostDividerWnd && m_wndGhostDividerWnd->IsWindowVisible())
+	{
+		m_ptNCHittestPos = { -1, -1 };
+		m_wndGhostDividerWnd->Hide();
 	}
 }
 
