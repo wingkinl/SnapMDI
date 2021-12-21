@@ -113,17 +113,6 @@ CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
 	return m_wndSnapPreview.get();
 }
 
-CGhostDividerWnd* CSnapWindowManager::GetGhostDividerWnd(bool bVertical)
-{
-	auto& wnd = m_wndGhostDividerWnd[bVertical];
-	if (!wnd)
-	{
-		wnd.reset(new CGhostDividerWnd(bVertical));
-		wnd->Create(m_pWndOwner);
-	}
-	return wnd.get();
-}
-
 void CSnapWindowManager::PreSnapInitialize()
 {
 	if (s_nHotRgnSize < 0)
@@ -304,7 +293,6 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 	auto startTime = GetTickCount();
 	m_vChildRects.clear();
 	m_vChildRects.reserve(20);
-	size_t nCount = 0;
 	CWnd* pWndChild = m_pWndOwner->GetWindow(GW_CHILD);
 	// It is reasonable to assume that the active window must be the first child
 	ASSERT(pWndChild && pWndChild == msg.pHelper->GetWnd());
@@ -601,20 +589,6 @@ void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 			m_bSwitchPressed = bSwitchKeyPressed;
 		}
 	}
-	else if (nIDEvent == m_nTimerIDDelaySplit)
-	{
-		KillTimer(nIDEvent);
-		m_nTimerIDDelaySplit = 0;
-		bool bVertical = m_nNCHittestRes == HTLEFT || m_nNCHittestRes == HTRIGHT;
-		auto pWnd = GetGhostDividerWnd(bVertical);
-		if (pWnd)
-		{
-			CRect rect;
-			m_pWndOwner->GetClientRect(&rect);
-			m_pWndOwner->ClientToScreen(&rect);
-			pWnd->Show(rect.TopLeft(), 200);
-		}
-	}
 }
 
 UINT_PTR CSnapWindowManager::SetTimer(UINT_PTR nID, UINT uElapse)
@@ -634,7 +608,6 @@ void CSnapWindowManager::KillTimer(UINT_PTR nID)
 
 void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 {
-	bool bSameHit = m_nNCHittestRes == (int)msg.wp;
 	m_nNCHittestRes = (int)msg.wp;
 	bool bShowDivider = false;
 	switch (msg.wp)
@@ -648,32 +621,142 @@ void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 	}
 	if (bShowDivider)
 	{
-		if (!bSameHit)
-		{
-			m_nTimerIDDelaySplit = SetTimer(0, 150);
-		}
+		CheckShowGhostDivider(msg);
 	}
 	else
 	{
-		HideGhostDivider(true);
+		HideLastGhostDivider();
 	}
 }
 
 void CSnapWindowManager::HandleNCMouseLeave(SnapWndMsg& msg)
 {
-	if (m_nTimerIDDelaySplit)
-	{
-		KillTimer(m_nTimerIDDelaySplit);
-		m_nTimerIDDelaySplit = 0;
-	}
-	HideGhostDivider(true);
-	HideGhostDivider(false);
+	HideLastGhostDivider();
 }
 
-void CSnapWindowManager::HideGhostDivider(bool bVertical)
+void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 {
-	m_nNCHittestRes = HTNOWHERE;
-	auto& wnd = m_wndGhostDividerWnd[bVertical];
+	m_pWndOwner->GetClientRect(&m_rcOwner);
+	m_pWndOwner->ClientToScreen(&m_rcOwner);
+	auto startTime = GetTickCount();
+
+	std::vector<ChildWndInfo> vChildRects;
+	vChildRects.clear();
+	vChildRects.reserve(20);
+	size_t nCount = 0;
+	CWnd* pWndChild = m_pWndOwner->GetWindow(GW_CHILD);
+	SnapTargetType targetType = SnapTargetType::Owner;
+
+	std::map<LONG, std::vector<WndBorderInfo>> wndWithSharedBorder;
+	CRect rcCurChild;
+	msg.pHelper->GetWnd()->GetWindowRect(&rcCurChild);
+	bool bVertical = m_nNCHittestRes == HTLEFT || m_nNCHittestRes == HTRIGHT;
+	size_t divPosOff1 = 0, divPosOff2 = 0;
+	size_t divMinOff = 0, divMaxOff = 0;
+	LONG nDivPos = 0;
+	LONG nCurFrom = 0, nCurTo = 0;
+	switch (m_nNCHittestRes)
+	{
+	case HTLEFT:
+	case HTRIGHT:
+		nDivPos = m_nNCHittestRes == HTLEFT ? rcCurChild.left : rcCurChild.right;
+		divPosOff1 = offsetof(RECT, left);
+		divPosOff2 = offsetof(RECT, right);
+		divMinOff = offsetof(RECT, top);
+		divMaxOff = offsetof(RECT, bottom);
+		break;
+	case HTTOP:
+	case HTBOTTOM:
+		nDivPos = m_nNCHittestRes == HTTOP ? rcCurChild.top : rcCurChild.bottom;
+		divPosOff1 = offsetof(RECT, top);
+		divPosOff2 = offsetof(RECT, bottom);
+		divMinOff = offsetof(RECT, left);
+		divMaxOff = offsetof(RECT, right);
+		break;
+	}
+
+	while (pWndChild)
+	{
+		ChildWndInfo childInfo = { pWndChild->GetSafeHwnd() };
+		pWndChild->GetWindowRect(&childInfo.rect);
+		auto& rect = childInfo.rect;
+
+		auto v1 = *(LONG*)((BYTE*)&rect + divPosOff1);
+		auto v2 = *(LONG*)((BYTE*)&rect + divPosOff2);
+		wndWithSharedBorder[v1].push_back({ vChildRects.size(), true });
+		wndWithSharedBorder[v2].push_back({ vChildRects.size(), true });
+
+		vChildRects.emplace_back(childInfo);
+		pWndChild = pWndChild->GetNextWindow(GW_HWNDNEXT);
+		if (GetTickCount() - startTime > 20)
+		{
+			TRACE("CSnapWindowManager some child windows are skipped to avoid lagging.\r\n");
+			break;
+		}
+	}
+	if (vChildRects.size() < 2)
+		return;
+	
+	StickedWndDiv div;
+	for (auto& sharedWnds : wndWithSharedBorder)
+	{
+		auto& wnds = sharedWnds.second;
+		if (wnds.size() < 2)
+			continue;
+		std::sort(wnds.begin(), wnds.end(), [&](WndBorderInfo& w1, WndBorderInfo& w2) {
+			auto& rect1 = vChildRects[w1.rectIdx].rect;
+			auto& rect2 = vChildRects[w2.rectIdx].rect;
+			auto v1 = *(LONG*)((BYTE*)&rect1 + divMinOff);
+			auto v2 = *(LONG*)((BYTE*)&rect2 + divMinOff);
+			return v1 < v2;
+			});
+		for (size_t ii = 1; ii < wnds.size(); ++ii)
+		{
+			auto& wnd1 = wnds[ii - 1];
+			auto& wnd2 = wnds[ii];
+			auto& wi1 = vChildRects[wnd1.rectIdx];
+			auto& wi2 = vChildRects[wnd2.rectIdx];
+			bool bSticked = false;
+			auto v1Max = *(LONG*)((BYTE*)&wi1.rect + divMaxOff);
+			auto v2Min = *(LONG*)((BYTE*)&wi2.rect + divMinOff);
+			if (wnd1.bFirst ^ wnd2.bFirst)
+			{
+				bSticked = v2Min < v1Max;
+			}
+			else
+			{
+				bSticked = v2Min == v1Max;
+			}
+		}
+	}
+// 	auto it = m_mGhostDividerWnds.find(div.pos);
+// 	CGhostDividerWnd* pWnd = nullptr;
+// 	if (it == m_mGhostDividerWnds.end())
+// 	{
+// 		m_div = div;
+// 		m_vChildRects.swap(vChildRects);
+// 		pWnd = new CGhostDividerWnd(bVertical);
+// 		pWnd->Create(m_pWndOwner);
+// 		m_mGhostDividerWnds[div.pos].reset(pWnd);
+// 	}
+// 	else
+// 	{
+// 		pWnd = it->second.get();
+// 	}
+// 	pWnd->Show(div.pos, div.length);
+}
+
+static bool operator<(const POINT& l, const POINT& r)
+{
+	return (l.x < r.x || (l.x == r.x && l.y < r.y));
+}
+
+void CSnapWindowManager::HideLastGhostDivider()
+{
+	auto it = m_mGhostDividerWnds.find(m_div.pos);
+	if (it == m_mGhostDividerWnds.end())
+		return;
+	auto& wnd = it->second;
 	if (wnd && wnd->IsWindowVisible())
 	{
 		wnd->Hide();

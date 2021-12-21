@@ -38,8 +38,6 @@ protected:
 
 	CSnapPreviewWnd* GetSnapPreview();
 
-	CGhostDividerWnd* GetGhostDividerWnd(bool bVertical);
-
 	void StartMoving(CSnapWindowHelper* pWndHelper);
 
 	void StopMoving(bool bAbort = false);
@@ -134,14 +132,16 @@ private:
 	void HandleNCMouseMove(SnapWndMsg& msg);
 	void HandleNCMouseLeave(SnapWndMsg& msg);
 
-	void HideGhostDivider(bool bVertical);
+	void CheckShowGhostDivider(SnapWndMsg& msg);
+	void HideLastGhostDivider();
 protected:
 	friend class CSnapWindowHelper;
 
 	CWnd*	m_pWndOwner = nullptr;
 	CRect	m_rcOwner;
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
-	std::unique_ptr<CGhostDividerWnd>	m_wndGhostDividerWnd[2];
+
+	std::map<POINT, std::unique_ptr<CGhostDividerWnd>>	m_mGhostDividerWnds;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
@@ -155,11 +155,23 @@ protected:
 
 	std::vector<ChildWndInfo>	m_vChildRects;
 
+	struct StickedWndDiv
+	{
+		// The starting point
+		// For vertical dividers, this is the top-most point
+		// For horizontal dividers, this is the left-most point
+		// This point is good enough to distinguish dividers.
+		POINT	pos = {-1, -1};
+		LONG	length = 0;
+		bool	vertical = false;
+		// Indices into m_vChildRects
+		std::vector<size_t>	vWndIds;
+	};
+	StickedWndDiv	m_div;
+
 	UINT_PTR	m_nTimerIDSnapSwitch = 0;
 	bool		m_bSwitchPressed = false;
 
-	// Delay showing of the divider in case mouse cursor leave the area very quickly
-	UINT_PTR	m_nTimerIDDelaySplit = 0;
 	int			m_nNCHittestRes = HTNOWHERE;
 
 	typedef std::map<UINT_PTR, CSnapWindowManager*> TimerMap;
