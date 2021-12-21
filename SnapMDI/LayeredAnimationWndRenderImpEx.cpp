@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "framework.h"
-#include "ALAWndRenderImpEx.h"
-#include "AlphaLayeredAnimationWnd.h"
+#include "LayeredAnimationWndRenderImpEx.h"
+#include "LayeredAnimationWnd.h"
 
-void CALAWndRenderImp::StartRendering()
+void CLayeredAnimationWndRenderImp::StartRendering()
 {
 	CRect rect;
 	if (GetCanvas(rect))
@@ -13,12 +13,12 @@ void CALAWndRenderImp::StartRendering()
 	}
 }
 
-void CALAWndRenderImp::StopRendering(bool bAbort)
+void CLayeredAnimationWndRenderImp::StopRendering(bool bAbort)
 {
 	//
 }
 
-BOOL CALAWndRenderImp::GetCanvas(CRect& rect) const
+BOOL CLayeredAnimationWndRenderImp::GetCanvas(CRect& rect) const
 {
 	if (m_pALAWnd)
 	{
@@ -29,7 +29,7 @@ BOOL CALAWndRenderImp::GetCanvas(CRect& rect) const
 	return FALSE;
 }
 
-BOOL CALAWndRenderImpInvert::Create(CWnd* pWndOwner)
+BOOL CLayeredAnimationWndRenderImpInvert::Create(CWnd* pWndOwner)
 {
 	CRect rect;
 	rect.SetRectEmpty();
@@ -40,7 +40,7 @@ BOOL CALAWndRenderImpInvert::Create(CWnd* pWndOwner)
 	return m_pALAWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
 }
 
-BOOL CALAWndRenderImpInvert::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+BOOL CLayeredAnimationWndRenderImpInvert::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 {
 	switch (message)
 	{
@@ -51,7 +51,7 @@ BOOL CALAWndRenderImpInvert::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam
 	return FALSE;
 }
 
-CALAWndRenderImpAlpha::~CALAWndRenderImpAlpha()
+CLayeredAnimationWndRenderImpAlpha::~CLayeredAnimationWndRenderImpAlpha()
 {
 	if (m_bGDIPlusStarted)
 	{
@@ -59,7 +59,7 @@ CALAWndRenderImpAlpha::~CALAWndRenderImpAlpha()
 	}
 }
 
-BOOL CALAWndRenderImpAlpha::Create(CWnd* pWndOwner)
+BOOL CLayeredAnimationWndRenderImpAlpha::Create(CWnd* pWndOwner)
 {
 	CRect rect;
 	rect.SetRectEmpty();
@@ -81,12 +81,12 @@ BOOL CALAWndRenderImpAlpha::Create(CWnd* pWndOwner)
 	return bOK;
 }
 
-BOOL CALAWndRenderImpAlpha::CanSupportAnimation() const
+BOOL CLayeredAnimationWndRenderImpAlpha::CanSupportAnimation() const
 {
 	return TRUE;
 }
 
-void CALAWndRenderImpAlpha::StartRendering()
+void CLayeredAnimationWndRenderImpAlpha::StartRendering()
 {
 	__super::StartRendering();
 
@@ -109,7 +109,7 @@ void CALAWndRenderImpAlpha::StartRendering()
 	}
 }
 
-BOOL CALAWndRenderImpAlpha::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+BOOL CLayeredAnimationWndRenderImpAlpha::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 {
 	switch (message)
 	{
@@ -124,13 +124,13 @@ BOOL CALAWndRenderImpAlpha::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam,
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-PFN_D3D11_CREATE_DEVICE	CALAWndRenderImpDirectComposition::procD3D11CreateDevice = nullptr;
-ProcD2D1CreateDevice			CALAWndRenderImpDirectComposition::procD2D1CreateDevice = nullptr;
-ProcDCompositionCreateDevice2	CALAWndRenderImpDirectComposition::procDCompositionCreateDevice2 = nullptr;
-ProcGetDpiForMonitor	CALAWndRenderImpDirectComposition::procGetDpiForMonitor = nullptr;
-BOOL	CALAWndRenderImpDirectComposition::s_bApplicableCheck = (BOOL)-1;
+PFN_D3D11_CREATE_DEVICE	CLayeredAnimationWndRenderImpDirectComposition::procD3D11CreateDevice = nullptr;
+ProcD2D1CreateDevice			CLayeredAnimationWndRenderImpDirectComposition::procD2D1CreateDevice = nullptr;
+ProcDCompositionCreateDevice2	CLayeredAnimationWndRenderImpDirectComposition::procDCompositionCreateDevice2 = nullptr;
+ProcGetDpiForMonitor	CLayeredAnimationWndRenderImpDirectComposition::procGetDpiForMonitor = nullptr;
+BOOL	CLayeredAnimationWndRenderImpDirectComposition::s_bApplicableCheck = (BOOL)-1;
 
-BOOL CALAWndRenderImpDirectComposition::IsApplicable()
+BOOL CLayeredAnimationWndRenderImpDirectComposition::IsApplicable()
 {
 	if (s_bApplicableCheck != (BOOL)-1)
 		return s_bApplicableCheck;
@@ -170,7 +170,7 @@ BOOL CALAWndRenderImpDirectComposition::IsApplicable()
 	return s_bApplicableCheck = bApplicable;
 }
 
-BOOL CALAWndRenderImpDirectComposition::Create(CWnd* pWndOwner)
+BOOL CLayeredAnimationWndRenderImpDirectComposition::Create(CWnd* pWndOwner)
 {
 	CRect rect;
 	rect.SetRectEmpty();
@@ -183,7 +183,7 @@ BOOL CALAWndRenderImpDirectComposition::Create(CWnd* pWndOwner)
 	return bOK;
 }
 
-void CALAWndRenderImpDirectComposition::HR(HRESULT const result)
+void CLayeredAnimationWndRenderImpDirectComposition::HR(HRESULT const result)
 {
 	if (S_OK != result)
 	{
@@ -191,17 +191,17 @@ void CALAWndRenderImpDirectComposition::HR(HRESULT const result)
 	}
 }
 
-bool CALAWndRenderImpDirectComposition::IsDeviceCreated() const
+bool CLayeredAnimationWndRenderImpDirectComposition::IsDeviceCreated() const
 {
 	return m_device3d;
 }
 
-void CALAWndRenderImpDirectComposition::ReleaseDeviceResources()
+void CLayeredAnimationWndRenderImpDirectComposition::ReleaseDeviceResources()
 {
 	m_device3d.Reset();
 }
 
-void CALAWndRenderImpDirectComposition::CreateDeviceResources()
+void CLayeredAnimationWndRenderImpDirectComposition::CreateDeviceResources()
 {
 	if (IsDeviceCreated())
 		return;
@@ -272,17 +272,17 @@ void CALAWndRenderImpDirectComposition::CreateDeviceResources()
 	m_size.height = (rect.bottom - rect.top) * 96 / m_dpi.y;
 }
 
-void CALAWndRenderImpDirectComposition::CreateDeviceResourcesEx(ID2D1DeviceContext* pDC)
+void CLayeredAnimationWndRenderImpDirectComposition::CreateDeviceResourcesEx(ID2D1DeviceContext* pDC)
 {
 
 }
 
-BOOL CALAWndRenderImpDirectComposition::CanSupportAnimation() const
+BOOL CLayeredAnimationWndRenderImpDirectComposition::CanSupportAnimation() const
 {
 	return TRUE;
 }
 
-BOOL CALAWndRenderImpDirectComposition::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+BOOL CLayeredAnimationWndRenderImpDirectComposition::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 {
 	switch (message)
 	{
@@ -299,12 +299,12 @@ BOOL CALAWndRenderImpDirectComposition::OnWndMsg(UINT message, WPARAM wParam, LP
 	return FALSE;
 }
 
-void CALAWndRenderImpDirectComposition::HandlePaint()
+void CLayeredAnimationWndRenderImpDirectComposition::HandlePaint()
 {
 
 }
 
-void CALAWndRenderImpDirectComposition::HandleSize(WPARAM wparam, LPARAM lparam)
+void CLayeredAnimationWndRenderImpDirectComposition::HandleSize(WPARAM wparam, LPARAM lparam)
 {
 	try
 	{
@@ -330,7 +330,7 @@ void CALAWndRenderImpDirectComposition::HandleSize(WPARAM wparam, LPARAM lparam)
 	}
 }
 
-void CALAWndRenderImpDirectComposition::HandleDPIChanged(WPARAM wParam, LPARAM lParam)
+void CLayeredAnimationWndRenderImpDirectComposition::HandleDPIChanged(WPARAM wParam, LPARAM lParam)
 {
 	m_dpi.x = LOWORD(wParam);
 	m_dpi.y = HIWORD(wParam);

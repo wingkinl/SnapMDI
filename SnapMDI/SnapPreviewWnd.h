@@ -1,8 +1,8 @@
 #pragma once
 
-#include "AlphaLayeredAnimationWnd.h"
+#include "LayeredAnimationWnd.h"
 
-using CSnapPreviewWndBase = CAlphaLayeredAnimationWnd;
+using CSnapPreviewWndBase = CLayeredAnimationWnd;
 
 class CSnapPreviewWnd : public CSnapPreviewWndBase
 {

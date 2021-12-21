@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "framework.h"
 #include "SnapPreviewWnd.h"
-#include "ALAWndRenderImpEx.h"
+#include "LayeredAnimationWndRenderImpEx.h"
 
-class CSnapPreviewRenderImpDirectComposition : public CALAWndRenderImpDirectComposition
+class CSnapPreviewRenderImpDirectComposition : public CLayeredAnimationWndRenderImpDirectComposition
 {
 public:
 	void CreateDeviceResourcesEx(ID2D1DeviceContext* pDC) override
@@ -82,9 +82,16 @@ private:
 	ComPtr<ID2D1SolidColorBrush>	m_brush;
 };
 
-class CSnapPreviewRenderImpAlpha : public CALAWndRenderImpAlpha
+class CSnapPreviewRenderImpAlpha : public CLayeredAnimationWndRenderImpAlpha
 {
 public:
+	static BOOL IsApplicable()
+	{
+		if (GetGlobalData()->m_nBitsPerPixel > 8)
+			return TRUE;
+		return FALSE;
+	}
+
 	void OnAnimationUpdate() override
 	{
 		if (!m_bmp.GetSafeHandle())
@@ -183,7 +190,7 @@ public:
 	}
 };
 
-class CSnapPreviewRenderImpInvert : public CALAWndRenderImpInvert
+class CSnapPreviewRenderImpInvert : public CLayeredAnimationWndRenderImpInvert
 {
 public:
 	void HandlePaint() override
@@ -215,14 +222,14 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-		if (CALAWndRenderImpDirectComposition::IsApplicable())
+		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
 		{
 			m_renderImp = std::make_shared<CSnapPreviewRenderImpDirectComposition>();
 			break;
 		}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
-		if (GetGlobalData()->m_nBitsPerPixel > 8)
+		if (CSnapPreviewRenderImpAlpha::IsApplicable())
 		{
 			m_tech = RenderTech::AlphaBlendedLayer;
 			m_renderImp = std::make_shared<CSnapPreviewRenderImpAlpha>();

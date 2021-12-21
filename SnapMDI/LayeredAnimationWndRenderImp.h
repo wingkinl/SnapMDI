@@ -1,14 +1,14 @@
 #pragma once
 
-class CAlphaLayeredAnimationWnd;
+class CLayeredAnimationWnd;
 
-class CALAWndRenderImp
+class CLayeredAnimationWndRenderImp
 {
 public:
-	CALAWndRenderImp() = default;
-	virtual ~CALAWndRenderImp() = default;
+	CLayeredAnimationWndRenderImp() = default;
+	virtual ~CLayeredAnimationWndRenderImp() = default;
 
-	void AttachToALAWnd(CAlphaLayeredAnimationWnd* pWnd) { m_pALAWnd = pWnd; }
+	void AttachToALAWnd(CLayeredAnimationWnd* pWnd) { m_pALAWnd = pWnd; }
 
 	virtual BOOL Create(CWnd* pWndOwner) = 0;
 
@@ -24,5 +24,5 @@ public:
 
 	virtual BOOL GetCanvas(CRect& rect) const;
 protected:
-	CAlphaLayeredAnimationWnd* m_pALAWnd = nullptr;
+	CLayeredAnimationWnd* m_pALAWnd = nullptr;
 };

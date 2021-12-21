@@ -183,9 +183,9 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ALAWndRenderImp.h" />
-    <ClInclude Include="ALAWndRenderImpEx.h" />
-    <ClInclude Include="AlphaLayeredAnimationWnd.h" />
+    <ClInclude Include="LayeredAnimationWndRenderImp.h" />
+    <ClInclude Include="LayeredAnimationWndRenderImpEx.h" />
+    <ClInclude Include="LayeredAnimationWnd.h" />
     <ClInclude Include="ChildFrm.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
@@ -199,8 +199,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ALAWndRenderImpEx.cpp" />
-    <ClCompile Include="AlphaLayeredAnimationWnd.cpp" />
+    <ClCompile Include="LayeredAnimationWndRenderImpEx.cpp" />
+    <ClCompile Include="LayeredAnimationWnd.cpp" />
     <ClCompile Include="ChildFrm.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="pch.cpp">

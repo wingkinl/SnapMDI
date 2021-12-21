@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ALAWndRenderImp.h"
+#include "LayeredAnimationWndRenderImp.h"
 
 #include <gdiplus.h>
 using namespace Gdiplus;
@@ -16,7 +16,7 @@ using namespace Gdiplus;
 using namespace Microsoft::WRL;
 using namespace D2D1;
 
-class CALAWndRenderImpInvert : public CALAWndRenderImp
+class CLayeredAnimationWndRenderImpInvert : public CLayeredAnimationWndRenderImp
 {
 public:
 	BOOL Create(CWnd* pWndOwner) override;
@@ -27,10 +27,10 @@ private:
 };
 
 
-class CALAWndRenderImpAlpha : public CALAWndRenderImp
+class CLayeredAnimationWndRenderImpAlpha : public CLayeredAnimationWndRenderImp
 {
 public:
-	~CALAWndRenderImpAlpha();
+	~CLayeredAnimationWndRenderImpAlpha();
 
 	BOOL Create(CWnd* pWndOwner) override;
 
@@ -62,7 +62,7 @@ typedef HRESULT(*ProcD2D1CreateDevice)(
 	ID2D1Device** d2dDevice
 	);
 
-class CALAWndRenderImpDirectComposition : public CALAWndRenderImp
+class CLayeredAnimationWndRenderImpDirectComposition : public CLayeredAnimationWndRenderImp
 {
 	static PFN_D3D11_CREATE_DEVICE	procD3D11CreateDevice;
 	static ProcD2D1CreateDevice		procD2D1CreateDevice;
@@ -110,8 +110,8 @@ public:
 	void HandleDPIChanged(WPARAM wParam, LPARAM lParam);
 protected:
 	// Device independent resources
-	D2D_SIZE_F						m_size;
-	D2D_POINT_2F					m_dpi;
+	D2D_SIZE_F						m_size = { 0 };
+	D2D_POINT_2F					m_dpi = { 0 };
 
 	// Device resources
 	ComPtr<ID3D11Device>			m_device3d;

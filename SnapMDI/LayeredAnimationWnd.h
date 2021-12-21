@@ -3,12 +3,12 @@
 #include <chrono>
 #include <memory>
 
-#include "ALAWndRenderImp.h"
+#include "LayeredAnimationWndRenderImp.h"
 
-class CAlphaLayeredAnimationWnd : public CWnd
+class CLayeredAnimationWnd : public CWnd
 {
 public:
-	CAlphaLayeredAnimationWnd();
+	CLayeredAnimationWnd();
 
 	enum class RenderTech
 	{
@@ -63,7 +63,7 @@ protected:
 	};
 	AnimateStage	m_aniStage = AnimateStage::Ready;
 
-	std::shared_ptr<CALAWndRenderImp> m_renderImp;
+	std::shared_ptr<CLayeredAnimationWndRenderImp> m_renderImp;
 
 	enum {TimerIDAnimation = 100};
 
@@ -72,7 +72,7 @@ protected:
 
 	// Implementation
 public:
-	virtual ~CAlphaLayeredAnimationWnd();
+	virtual ~CLayeredAnimationWnd();
 
 	// Generated message map functions
 protected:

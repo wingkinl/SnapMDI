@@ -1,28 +1,28 @@
 #include "pch.h"
 #include "framework.h"
-#include "AlphaLayeredAnimationWnd.h"
+#include "LayeredAnimationWnd.h"
 #include <algorithm>
 
 #undef min
 #undef max
 
-CAlphaLayeredAnimationWnd::CAlphaLayeredAnimationWnd()
+CLayeredAnimationWnd::CLayeredAnimationWnd()
 {
 	
 }
 
-CAlphaLayeredAnimationWnd::~CAlphaLayeredAnimationWnd()
+CLayeredAnimationWnd::~CLayeredAnimationWnd()
 {
 }
 
-void CAlphaLayeredAnimationWnd::RepositionWindow(const CRect& rect)
+void CLayeredAnimationWnd::RepositionWindow(const CRect& rect)
 {
 	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),
 		SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
 	RedrawWindow();
 }
 
-void CAlphaLayeredAnimationWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) const
+void CLayeredAnimationWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) const
 {
 	if (pWnd)
 		pWnd->GetWindowRect(rect);
@@ -32,7 +32,7 @@ void CAlphaLayeredAnimationWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) co
 	rect.bottom = std::min(rect.bottom, m_rcOwner.bottom);
 }
 
-void CAlphaLayeredAnimationWnd::StopAnimation()
+void CLayeredAnimationWnd::StopAnimation()
 {
 	if (m_nTimerIDAni)
 	{
@@ -41,7 +41,7 @@ void CAlphaLayeredAnimationWnd::StopAnimation()
 	}
 }
 
-void CAlphaLayeredAnimationWnd::FinishAnimationCleanup()
+void CLayeredAnimationWnd::FinishAnimationCleanup()
 {
 	StopAnimation();
 	if (m_aniStage != AnimateStage::Showing)
@@ -56,13 +56,13 @@ enum
 {	AnimationInterval = 10
 };
 
-void CAlphaLayeredAnimationWnd::ScheduleAnimation()
+void CLayeredAnimationWnd::ScheduleAnimation()
 {
 	m_AniStartTime = std::chrono::steady_clock::now();
 	m_nTimerIDAni = SetTimer(TimerIDAnimation, AnimationInterval, nullptr);
 }
 
-bool CAlphaLayeredAnimationWnd::ShouldDoAnimation() const
+bool CLayeredAnimationWnd::ShouldDoAnimation() const
 {
 	if (!m_bEnableAnimation)
 		return false;
@@ -71,7 +71,7 @@ bool CAlphaLayeredAnimationWnd::ShouldDoAnimation() const
 	return m_renderImp->CanSupportAnimation();
 }
 
-BOOL CAlphaLayeredAnimationWnd::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+BOOL CLayeredAnimationWnd::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 {
 	if (m_renderImp)
 	{
@@ -81,7 +81,7 @@ BOOL CAlphaLayeredAnimationWnd::OnWndMsg(UINT message, WPARAM wParam, LPARAM lPa
 	return __super::OnWndMsg(message, wParam, lParam, pResult);
 }
 
-BEGIN_MESSAGE_MAP(CAlphaLayeredAnimationWnd, CWnd)
+BEGIN_MESSAGE_MAP(CLayeredAnimationWnd, CWnd)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
 	ON_WM_DESTROY()
@@ -90,7 +90,7 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CSnapWindowBase message handlers
 
-BOOL CAlphaLayeredAnimationWnd::OnEraseBkgnd(CDC* /*pDC*/)
+BOOL CLayeredAnimationWnd::OnEraseBkgnd(CDC* /*pDC*/)
 {
 	return TRUE;
 }
@@ -103,7 +103,7 @@ inline static double SmoothMoveELX(double x)
 	return (cos((1 - x) * dPI) + 1) / 2;
 }
 
-LONG CAlphaLayeredAnimationWnd::CalcSmoothPos(double pos, LONG from, LONG to)
+LONG CLayeredAnimationWnd::CalcSmoothPos(double pos, LONG from, LONG to)
 {
 	if (from == to || pos > 1.)
 		return to;
@@ -113,7 +113,7 @@ LONG CAlphaLayeredAnimationWnd::CalcSmoothPos(double pos, LONG from, LONG to)
 	return (LONG)newPos;
 }
 
-CRect CAlphaLayeredAnimationWnd::AnimateRect(double pos, const RECT& from, const RECT& to)
+CRect CLayeredAnimationWnd::AnimateRect(double pos, const RECT& from, const RECT& to)
 {
 	CRect rect;
 	rect.left = CalcSmoothPos(pos, from.left, to.left);
@@ -123,7 +123,7 @@ CRect CAlphaLayeredAnimationWnd::AnimateRect(double pos, const RECT& from, const
 	return rect;
 }
 
-void CAlphaLayeredAnimationWnd::OnTimer(UINT_PTR nIDEvent)
+void CLayeredAnimationWnd::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent != m_nTimerIDAni)
 		return;
@@ -134,7 +134,7 @@ void CAlphaLayeredAnimationWnd::OnTimer(UINT_PTR nIDEvent)
 	OnAnimationTimer(timeDiffCount);
 }
 
-void CAlphaLayeredAnimationWnd::OnDestroy()
+void CLayeredAnimationWnd::OnDestroy()
 {
 	StopAnimation();
 	__super::OnDestroy();
