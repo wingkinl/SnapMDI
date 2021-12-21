@@ -3,6 +3,32 @@
 #include "ALAWndRenderImpEx.h"
 #include "AlphaLayeredAnimationWnd.h"
 
+void CALAWndRenderImp::StartRendering()
+{
+	CRect rect;
+	if (GetCanvas(rect))
+	{
+		m_pALAWnd->SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(),
+			SWP_NOACTIVATE | SWP_NOREDRAW);
+	}
+}
+
+void CALAWndRenderImp::StopRendering(bool bAbort)
+{
+	//
+}
+
+BOOL CALAWndRenderImp::GetCanvas(CRect& rect) const
+{
+	if (m_pALAWnd)
+	{
+		rect = m_pALAWnd->GetOwnerRect();
+		return TRUE;
+	}
+	ASSERT(0);
+	return FALSE;
+}
+
 BOOL CALAWndRenderImpInvert::Create(CWnd* pWndOwner)
 {
 	CRect rect;
@@ -45,9 +71,7 @@ BOOL CALAWndRenderImpAlpha::Create(CWnd* pWndOwner)
 
 	if (bOK)
 	{
-		if (m_pALAWnd->IsAnimateByMovingWnd())
-			m_pALAWnd->SetLayeredWindowAttributes(0, 128, LWA_ALPHA);
-		else
+		if (NeedGDIPlus())
 		{
 			GdiplusStartupInput gdiplusStartupInput;
 			GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
@@ -64,30 +88,24 @@ BOOL CALAWndRenderImpAlpha::CanSupportAnimation() const
 
 void CALAWndRenderImpAlpha::StartRendering()
 {
-	if (m_pALAWnd->IsAnimateByMovingWnd())
-	{
-		__super::StartRendering();
-	}
-	else
-	{
-		auto& rectOwner = m_pALAWnd->GetOwnerRect();
-		m_pALAWnd->SetWindowPos(&CWnd::wndTop, rectOwner.left, rectOwner.top, rectOwner.Width(), rectOwner.Height(),
-			SWP_NOACTIVATE | SWP_NOREDRAW);
+	__super::StartRendering();
 
-		CSize size(rectOwner.Size());
-		if (m_szBmp != size)
+	CRect rectOwner;
+	GetCanvas(rectOwner);
+
+	CSize size(rectOwner.Size());
+	if (m_szBmp != size)
+	{
+		m_bmp.DeleteObject();
+
+		m_pBits = NULL;
+		HBITMAP hBitmap = CDrawingManager::CreateBitmap_32(size, (void**)&m_pBits);
+		if (!hBitmap)
 		{
-			m_bmp.DeleteObject();
-
-			m_pBits = NULL;
-			HBITMAP hBitmap = CDrawingManager::CreateBitmap_32(size, (void**)&m_pBits);
-			if (!hBitmap)
-			{
-				return;
-			}
-			m_bmp.Attach(hBitmap);
-			m_szBmp = size;
+			return;
 		}
+		m_bmp.Attach(hBitmap);
+		m_szBmp = size;
 	}
 }
 
@@ -262,20 +280,6 @@ void CALAWndRenderImpDirectComposition::CreateDeviceResourcesEx(ID2D1DeviceConte
 BOOL CALAWndRenderImpDirectComposition::CanSupportAnimation() const
 {
 	return TRUE;
-}
-
-void CALAWndRenderImpDirectComposition::StartRendering()
-{
-	if (m_pALAWnd->IsAnimateByMovingWnd())
-	{
-		__super::StartRendering();
-	}
-	else
-	{
-		auto& rectOwner = m_pALAWnd->GetOwnerRect();
-		m_pALAWnd->SetWindowPos(&CWnd::wndTop, rectOwner.left, rectOwner.top, rectOwner.Width(), rectOwner.Height(),
-			SWP_NOACTIVATE | SWP_NOREDRAW);
-	}
 }
 
 BOOL CALAWndRenderImpDirectComposition::OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult)

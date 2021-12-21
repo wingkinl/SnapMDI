@@ -27,13 +27,10 @@ public:
 	inline bool IsAnimationEnabled() const { return m_bEnableAnimation; }
 	void EnableAnimation(bool val) { m_bEnableAnimation = val; }
 
-	inline bool IsAnimateByMovingWnd() const { return m_bAnimateByMovingWnd; }
-	void SetAnimateByMovingWnd(bool val) { m_bAnimateByMovingWnd = val; }
-
-	void RepositionWindow(const CRect& rect);
-
 	const CRect& GetOwnerRect() const { return m_rcOwner; }
 protected:
+	void RepositionWindow(const CRect& rect);
+
 	void GetWindowInOwnerRect(CRect& rect, CWnd* pWnd = nullptr) const;
 	void StopAnimation();
 
@@ -57,7 +54,6 @@ protected:
 	CRect		m_rcOwner;
 	RenderTech	m_tech = RenderTech::DirectComposition;
 	bool		m_bEnableAnimation = true;
-	bool		m_bAnimateByMovingWnd = false;
 
 	enum class AnimateStage
 	{

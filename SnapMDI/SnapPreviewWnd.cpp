@@ -2,7 +2,6 @@
 #include "framework.h"
 #include "SnapPreviewWnd.h"
 #include "ALAWndRenderImpEx.h"
-#include "SnapWindowManager.h"
 
 class CSnapPreviewRenderImpDirectComposition : public CALAWndRenderImpDirectComposition
 {
@@ -14,7 +13,7 @@ public:
 			m_brush.ReleaseAndGetAddressOf()));
 	}
 
-	void OnAnimationUpdateRendering() override
+	void OnAnimationUpdate() override
 	{
 		m_rect = ((CSnapPreviewWnd*)m_pALAWnd)->GetCurRect();
 		m_pALAWnd->ScreenToClient(&m_rect);
@@ -44,17 +43,10 @@ public:
 
 			dc->Clear();
 			D2D_RECT_F rect;
-			if (m_pALAWnd->IsAnimateByMovingWnd())
-			{
-				rect = D2D_RECT_F{ 0, 0, m_size.width, m_size.height };
-			}
-			else
-			{
-				rect.left = DPtoLP(m_rect.left, m_dpi.x);
-				rect.top = DPtoLP(m_rect.top, m_dpi.y);
-				rect.right = DPtoLP(m_rect.right, m_dpi.y);
-				rect.bottom = DPtoLP(m_rect.bottom, m_dpi.y);
-			}
+			rect.left = DPtoLP(m_rect.left, m_dpi.x);
+			rect.top = DPtoLP(m_rect.top, m_dpi.y);
+			rect.right = DPtoLP(m_rect.right, m_dpi.y);
+			rect.bottom = DPtoLP(m_rect.bottom, m_dpi.y);
 			//dc->FillRectangle(rect, m_brush.Get());
 			D2D1_ROUNDED_RECT rRect;
 			rRect.rect = rect;
@@ -93,7 +85,7 @@ private:
 class CSnapPreviewRenderImpAlpha : public CALAWndRenderImpAlpha
 {
 public:
-	void OnAnimationUpdateRendering() override
+	void OnAnimationUpdate() override
 	{
 		if (!m_bmp.GetSafeHandle())
 			return;
@@ -211,8 +203,9 @@ public:
 	}
 };
 
-CSnapPreviewWnd::CSnapPreviewWnd(CSnapWindowManager* pManager)
+CSnapPreviewWnd::CSnapPreviewWnd()
 {
+	
 }
 
 void CSnapPreviewWnd::Create(CWnd* pWndOwner)
@@ -322,10 +315,7 @@ void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
 	m_rectCur = rect;
 	if (m_renderImp)
 	{
-		if (IsAnimateByMovingWnd())
-			RepositionWindow(m_rectCur);
-		else
-			m_renderImp->OnAnimationUpdateRendering();
+		m_renderImp->OnAnimationUpdate();
 	}
 	if (bFinish)
 	{

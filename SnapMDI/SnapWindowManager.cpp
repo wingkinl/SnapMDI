@@ -113,7 +113,7 @@ CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
 {
 	if (!m_wndSnapPreview)
 	{
-		m_wndSnapPreview.reset(new CSnapPreviewWnd(this));
+		m_wndSnapPreview.reset(new CSnapPreviewWnd());
 		m_wndSnapPreview->Create(m_pWndOwner);
 	}
 	return m_wndSnapPreview.get();

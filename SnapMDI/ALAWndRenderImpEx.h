@@ -42,6 +42,8 @@ public:
 protected:
 	virtual void HandlePaint() = 0;
 
+	virtual bool NeedGDIPlus() const { return true; }
+
 	CBitmap	m_bmp;
 	LPBYTE	m_pBits = nullptr;
 	CSize	m_szBmp;
@@ -98,8 +100,6 @@ public:
 	virtual void CreateDeviceResourcesEx(ID2D1DeviceContext* pDC);
 
 	BOOL CanSupportAnimation() const override;
-
-	void StartRendering() override;
 
 	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
 

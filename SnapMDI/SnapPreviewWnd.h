@@ -2,14 +2,12 @@
 
 #include "AlphaLayeredAnimationWnd.h"
 
-class CSnapWindowManager;
-
 using CSnapPreviewWndBase = CAlphaLayeredAnimationWnd;
 
 class CSnapPreviewWnd : public CSnapPreviewWndBase
 {
 public:
-	CSnapPreviewWnd(CSnapWindowManager* pManager);
+	CSnapPreviewWnd();
 
 	void Create(CWnd* pWndOwner);
 
@@ -26,8 +24,6 @@ private:
 
 	void OnAnimationTimer(double timeDiff) override;
 private:
-	CSnapWindowManager* m_pSnapManager = nullptr;
-
 	bool		m_bStartedSnapping = false;
 	CRect		m_rectCur;
 	CRect		m_rectFrom;

@@ -14,16 +14,15 @@ public:
 
 	virtual BOOL CanSupportAnimation() const { return FALSE; }
 
-	virtual void StartRendering() {}
+	virtual void StartRendering();
 
-	virtual void StopRendering(bool bAbort)
-	{
-		//
-	}
+	virtual void StopRendering(bool bAbort);
 
-	virtual void OnAnimationUpdateRendering() {}
+	virtual void OnAnimationUpdate() {}
 
 	virtual BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) { return FALSE; }
+
+	virtual BOOL GetCanvas(CRect& rect) const;
 protected:
 	CAlphaLayeredAnimationWnd* m_pALAWnd = nullptr;
 };
