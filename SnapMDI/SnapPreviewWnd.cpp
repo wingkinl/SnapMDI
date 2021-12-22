@@ -56,11 +56,11 @@ public:
 			rRect.radiusX = 10;
 			rRect.radiusY = 10;
 
-			m_brush->SetColor({ 0.8f, 0.8f, 0.8f, 0.5f });
+			m_brush->SetColor({ 0.8f, 0.8f, 0.8f, 0.78f });
 			//dc->FillRectangle(rect, m_brush.Get());
 			dc->FillRoundedRectangle(rRect, m_brush.Get());
 
-			m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.5f });
+			m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.58f });
 
 			rRect.rect.left += gap;
 			rRect.rect.top += gap;
@@ -110,8 +110,8 @@ public:
 			COLORREF crfFill = RGB(66, 143, 222);
 
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
-			Gdiplus::Color color(128, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
-			Gdiplus::SolidBrush brush(Gdiplus::Color(128, 0xcc, 0xcc, 0xcc));
+			Gdiplus::Color color(150, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
+			Gdiplus::SolidBrush brush(Gdiplus::Color(200, 0xcc, 0xcc, 0xcc));
 			Gdiplus::Rect rc(rect.left, rect.top, rect.Width(), rect.Height());
 
 			Gdiplus::GraphicsPath path;

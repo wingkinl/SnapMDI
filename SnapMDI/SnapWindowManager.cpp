@@ -634,11 +634,222 @@ void CSnapWindowManager::HandleNCMouseLeave(SnapWndMsg& msg)
 	HideLastGhostDivider();
 }
 
+#ifdef _DEBUG
+class CPerformanceCheck
+{
+public:
+	CPerformanceCheck()
+	{
+		m_nStartTime = GetTickCount();
+	}
+	~CPerformanceCheck()
+	{
+		DWORD dwTime = GetTickCount() - m_nStartTime;
+		if (dwTime > 20)
+		{
+			// The code is too slow, try to improve it.
+			// Otherwise dragging window feels laggy
+			ASSERT(0);
+		}
+	}
+	DWORD m_nStartTime;
+};
+#endif // _DEBUG
+
+struct AdjacentWindowsHelper
+{
+	CSnapWindowManager* m_pManager;
+	CWnd*				m_pCurWnd;
+
+	LONG m_nTolerance = 1;
+
+	struct WndEdge
+	{
+		size_t	rectIdx;	// points to m_vChildRects
+		bool	bFirst;		// first edge or the second
+	};
+
+	struct AdjacentWindows
+	{
+		LONG pos;
+		std::vector<WndEdge>	wnds;
+	};
+
+	using ChildWndInfo = CSnapWindowManager::ChildWndInfo;
+	using StickedWndDiv = CSnapWindowManager::StickedWndDiv;
+
+	// first one in the array is for horizontal, the second one for vertical
+	std::vector<AdjacentWindows>	m_adjacentWnds[2];
+	std::vector<ChildWndInfo>		m_vChildRects;
+	size_t							m_nStickToOwnerCount = 0;
+
+	void InitChildWndInfosForSnap();
+
+	void InitChildWndInfosForDivider(bool bVertical);
+
+	void CheckSnapableWindows();
+
+	void CheckStickedWindows(StickedWndDiv& div, int nNCHittestRes);
+
+	AdjacentWindows* FindAdjacentWindowByPosition(LONG pos, bool bVertical);
+
+	void InsertWindowPosition(LONG pos, bool bVertical, size_t nRectIdx, bool bFirstEdge);
+
+	inline bool MatchPosition(LONG p1, LONG p2) const
+	{
+		return std::abs(p1 - p2) <= m_nTolerance;
+	}
+};
+
+void AdjacentWindowsHelper::InitChildWndInfosForSnap()
+{
+	auto pWndOwner = m_pManager->m_pWndOwner;
+	CWnd* pWndChild = pWndOwner->GetWindow(GW_CHILD);
+	// It is reasonable to assume that the active window must be the first child
+	ASSERT(pWndChild && pWndChild == m_pCurWnd);
+	auto& rcOwner = m_pManager->m_rcOwner;
+
+	pWndOwner->GetClientRect(&rcOwner);
+	pWndOwner->ClientToScreen(&rcOwner);
+
+	m_vChildRects.clear();
+	m_vChildRects.reserve(20);
+
+	for (; pWndChild; pWndChild = pWndChild->GetNextWindow(GW_HWNDNEXT))
+	{
+		if (pWndChild == m_pCurWnd)
+			continue;
+		ChildWndInfo childInfo = { pWndChild->GetSafeHwnd() };
+		pWndChild->GetWindowRect(&childInfo.rect);
+		auto& rect = childInfo.rect;
+		size_t rectIdx = m_vChildRects.size();
+
+		if (MatchPosition(rect.left, rcOwner.left))
+			childInfo.bBorderWithOwner = true;
+		else
+			InsertWindowPosition(rect.left, true, rectIdx, true);
+
+		if (MatchPosition(rect.top, rcOwner.top))
+			childInfo.bBorderWithOwner = true;
+		else
+			InsertWindowPosition(rect.top, false, rectIdx, true);
+
+		if (MatchPosition(rect.right, rcOwner.right))
+			childInfo.bBorderWithOwner = true;
+		else
+			InsertWindowPosition(rect.right, true, rectIdx, false);
+
+		if (MatchPosition(rect.bottom, rcOwner.bottom))
+			childInfo.bBorderWithOwner = true;
+		else
+			InsertWindowPosition(rect.bottom, false, rectIdx, false);
+
+		if (childInfo.bBorderWithOwner)
+		{
+			++m_nStickToOwnerCount;
+		}
+		m_vChildRects.emplace_back(childInfo);
+	}
+}
+
+void AdjacentWindowsHelper::InitChildWndInfosForDivider(bool bVertical)
+{
+	auto pWndOwner = m_pManager->m_pWndOwner;
+	auto& rcOwner = m_pManager->m_rcOwner;
+
+	pWndOwner->GetClientRect(&rcOwner);
+	pWndOwner->ClientToScreen(&rcOwner);
+
+	m_vChildRects.clear();
+	m_vChildRects.reserve(20);
+
+	size_t divPosOff1 = 0, divPosOff2 = 0;
+	if (bVertical)
+	{
+		divPosOff1 = offsetof(RECT, left);
+		divPosOff2 = offsetof(RECT, right);
+	}
+	else
+	{
+		divPosOff1 = offsetof(RECT, top);
+		divPosOff2 = offsetof(RECT, bottom);
+	}
+
+	CWnd* pWndChild = pWndOwner->GetWindow(GW_CHILD);
+	for (; pWndChild; pWndChild = pWndChild->GetNextWindow(GW_HWNDNEXT))
+	{
+		ChildWndInfo childInfo = { pWndChild->GetSafeHwnd() };
+		pWndChild->GetWindowRect(&childInfo.rect);
+		auto& rect = childInfo.rect;
+
+		auto pos1 = *(LONG*)((BYTE*)&rect + divPosOff1);
+		auto pos2 = *(LONG*)((BYTE*)&rect + divPosOff2);
+
+		size_t rectIdx = m_vChildRects.size();
+
+		InsertWindowPosition(pos1, bVertical, rectIdx, true);
+		InsertWindowPosition(pos2, bVertical, rectIdx, false);
+
+		m_vChildRects.emplace_back(childInfo);
+	}
+}
+
+void AdjacentWindowsHelper::CheckSnapableWindows()
+{
+
+}
+
+void AdjacentWindowsHelper::CheckStickedWindows(StickedWndDiv& div, int nNCHittestRes)
+{
+	bool bVertical = nNCHittestRes == HTLEFT || nNCHittestRes == HTRIGHT;
+	auto& wndWithSharedBorder = m_adjacentWnds[bVertical];
+	for (auto& sharedWnds : wndWithSharedBorder)
+	{
+// 		auto& wnds = sharedWnds.second;
+// 		if (wnds.size() < 2)
+// 			continue;
+// 		std::sort(wnds.begin(), wnds.end(), [&](WndBorderInfo& w1, WndBorderInfo& w2) {
+// 			auto& rect1 = vChildRects[w1.rectIdx].rect;
+// 			auto& rect2 = vChildRects[w2.rectIdx].rect;
+// 			auto v1 = *(LONG*)((BYTE*)&rect1 + divMinOff);
+// 			auto v2 = *(LONG*)((BYTE*)&rect2 + divMinOff);
+// 			return v1 < v2;
+// 			});
+// 		for (size_t ii = 1; ii < wnds.size(); ++ii)
+// 		{
+// 			auto& wnd1 = wnds[ii - 1];
+// 			auto& wnd2 = wnds[ii];
+// 			auto& wi1 = vChildRects[wnd1.rectIdx];
+// 			auto& wi2 = vChildRects[wnd2.rectIdx];
+// 			bool bSticked = false;
+// 			auto v1Max = *(LONG*)((BYTE*)&wi1.rect + divMaxOff);
+// 			auto v2Min = *(LONG*)((BYTE*)&wi2.rect + divMinOff);
+// 			if (wnd1.bFirst ^ wnd2.bFirst)
+// 			{
+// 				bSticked = v2Min < v1Max;
+// 			}
+// 			else
+// 			{
+// 				bSticked = v2Min == v1Max;
+// 			}
+// 		}
+	}
+}
+
+auto AdjacentWindowsHelper::FindAdjacentWindowByPosition(LONG pos, bool bVertical) -> AdjacentWindows*
+{
+	return nullptr;
+}
+
+void AdjacentWindowsHelper::InsertWindowPosition(LONG pos, bool bVertical, size_t nRectIdx, bool bFirstEdge)
+{
+
+}
+
 void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 {
 	m_pWndOwner->GetClientRect(&m_rcOwner);
 	m_pWndOwner->ClientToScreen(&m_rcOwner);
-	auto startTime = GetTickCount();
 
 	std::vector<ChildWndInfo> vChildRects;
 	vChildRects.clear();
@@ -648,6 +859,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 	SnapTargetType targetType = SnapTargetType::Owner;
 
 	std::map<LONG, std::vector<WndBorderInfo>> wndWithSharedBorder;
+
 	CRect rcCurChild;
 	msg.pHelper->GetWnd()->GetWindowRect(&rcCurChild);
 	bool bVertical = m_nNCHittestRes == HTLEFT || m_nNCHittestRes == HTRIGHT;
@@ -681,18 +893,13 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 		pWndChild->GetWindowRect(&childInfo.rect);
 		auto& rect = childInfo.rect;
 
-		auto v1 = *(LONG*)((BYTE*)&rect + divPosOff1);
-		auto v2 = *(LONG*)((BYTE*)&rect + divPosOff2);
-		wndWithSharedBorder[v1].push_back({ vChildRects.size(), true });
-		wndWithSharedBorder[v2].push_back({ vChildRects.size(), true });
+		auto pos1 = *(LONG*)((BYTE*)&rect + divPosOff1);
+		auto pos2 = *(LONG*)((BYTE*)&rect + divPosOff2);
+		wndWithSharedBorder[pos1].push_back({ vChildRects.size(), true });
+		wndWithSharedBorder[pos2].push_back({ vChildRects.size(), false });
 
 		vChildRects.emplace_back(childInfo);
 		pWndChild = pWndChild->GetNextWindow(GW_HWNDNEXT);
-		if (GetTickCount() - startTime > 20)
-		{
-			TRACE("CSnapWindowManager some child windows are skipped to avoid lagging.\r\n");
-			break;
-		}
 	}
 	if (vChildRects.size() < 2)
 		return;

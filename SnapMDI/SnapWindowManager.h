@@ -80,6 +80,7 @@ protected:
 		bool	bBorderWithOwner;
 		bool	bBorderWithSibling;
 	};
+	friend struct AdjacentWindowsHelper;
 
 	enum class SnapGridType : DWORD
 	{
