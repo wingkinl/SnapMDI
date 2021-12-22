@@ -77,8 +77,8 @@ protected:
 	{
 		HWND	hWndChild;
 		RECT	rect;
-		bool	bBorderWithOwner;
-		bool	bBorderWithSibling;
+		bool	bAdjacentToOwner;
+		bool	bAdjacentToSibling;
 	};
 	friend struct AdjacentWindowsHelper;
 
@@ -166,7 +166,7 @@ protected:
 		LONG	length = 0;
 		bool	vertical = false;
 		// Indices into m_vChildRects
-		std::vector<size_t>	vWndIds;
+		std::vector<size_t>	wndIds;
 	};
 	StickedWndDiv	m_div;
 
