@@ -209,6 +209,7 @@ protected:
 	};
 	StickedWndDiv		m_div;
 	MinMaxDivideInfo	m_minmaxDiv = { 0 };
+	BOOL				m_bDividing = FALSE;
 
 	friend struct DivideWindowsHelper;
 

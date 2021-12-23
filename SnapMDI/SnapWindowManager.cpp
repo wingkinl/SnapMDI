@@ -70,6 +70,11 @@ public:
 	{
 		return std::abs(p1 - p2) <= m_nTolerance;
 	}
+
+	static bool ShouldIncludeWindow(CWnd* pChildWnd)
+	{
+		return pChildWnd->IsWindowVisible() && !pChildWnd->IsIconic();
+	}
 };
 
 auto AdjacentWindowsHelper::FindAdjacentWindowByPosition(LONG pos, bool bVertical) const -> AdjacentWindows*
@@ -124,7 +129,7 @@ void SnapWindowsHelper::InitChildWndInfosForSnap()
 
 	for (; pWndChild; pWndChild = pWndChild->GetNextWindow(GW_HWNDNEXT))
 	{
-		if (pWndChild == m_pCurWnd)
+		if (pWndChild == m_pCurWnd || !ShouldIncludeWindow(pWndChild))
 			continue;
 		ChildWndInfo childInfo = { pWndChild->GetSafeHwnd() };
 		pWndChild->GetWindowRect(&childInfo.rect);
@@ -278,6 +283,8 @@ void DivideWindowsHelper::InitChildWndInfosForDivider()
 	CWnd* pWndChild = pWndOwner->GetWindow(GW_CHILD);
 	for (; pWndChild; pWndChild = pWndChild->GetNextWindow(GW_HWNDNEXT))
 	{
+		if (!ShouldIncludeWindow(pWndChild))
+			continue;
 		ChildWndInfo childInfo = { pWndChild->GetSafeHwnd() };
 		pWndChild->GetWindowRect(&childInfo.rect);
 		auto& rect = childInfo.rect;
@@ -305,7 +312,7 @@ void DivideWindowsHelper::InitChildWndInfosForDivider()
 			m_vChildRects.emplace_back(childInfo);
 		}
 	}
-	ASSERT(m_nCurWndIndex >= 0);
+	ASSERT(m_vChildRects.empty() || m_nCurWndIndex >= 0);
 }
 
 void DivideWindowsHelper::CheckStickedWindows(StickedWndDiv& div)
@@ -405,6 +412,7 @@ void DivideWindowsHelper::CheckStickedWindows(StickedWndDiv& div)
 		}
 		ASSERT(bFoundCurWnd);
 	}
+	ASSERT(div.wnds.size() == m_vChildRects.size());
 }
 
 bool DivideWindowsHelper::MatchDividerWindow(const StickedWndDiv& div, const DividerWndInfo& wi) const
@@ -497,6 +505,7 @@ void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
 	if (m_div.valid)
 	{
 		m_bEnterSizeMove = EnterDividing(msg);
+		m_bDividing = m_bEnterSizeMove;
 	}
 	else
 	{
@@ -520,9 +529,10 @@ void CSnapWindowManager::HandleExitSizeMove(SnapWndMsg& msg)
 		StopMoving(m_bAborted || !CanDoSnapping(m_snapTarget));
 		m_bIsMoving = FALSE;
 	}
-	else if (m_wndDividePreview->GetSafeHwnd())
+	else if (m_bDividing)
 	{
 		StopDividing(m_bAborted);
+		m_bDividing = FALSE;
 	}
 	m_snapTarget = SnapTargetType::None;
 	m_bEnterSizeMove = FALSE;
@@ -558,7 +568,56 @@ void CSnapWindowManager::HandleMoving(SnapWndMsg& msg)
 void CSnapWindowManager::HandleSizing(SnapWndMsg& msg)
 {
 	ASSERT(m_bEnterSizeMove);
-	// TODO
+	if (m_bDividing && m_wndDividePreview)
+	{
+		// TODO
+		auto& rect = *(RECT*)msg.lp;
+		LONG* pPosV = nullptr;
+		switch (m_nNCHittestRes)
+		{
+		case HTLEFT:
+			pPosV = &rect.left;
+			break;
+		case HTTOP:
+			pPosV = &rect.top;
+			break;
+		case HTRIGHT:
+			pPosV = &rect.right;
+			break;
+		case HTBOTTOM:
+			pPosV = &rect.top;
+			break;
+		default:
+			ASSERT(0);
+			return;
+		}
+		auto& pos = *pPosV;
+		if (pos < m_minmaxDiv.nMin)
+			pos = m_minmaxDiv.nMin;
+		else if (pos > m_minmaxDiv.nMax)
+			pos = m_minmaxDiv.nMax;
+
+		size_t rcPosOff1 = 0, rcPosOff2 = 0;
+		if (m_div.vertical)
+		{
+			rcPosOff1 = offsetof(RECT, left);
+			rcPosOff2 = offsetof(RECT, right);
+		}
+		else
+		{
+			rcPosOff1 = offsetof(RECT, top);
+			rcPosOff2 = offsetof(RECT, bottom);
+		}
+
+		for (auto& we : m_div.wnds)
+		{
+			auto& wi = m_vChildRects[we.rectIdx];
+			auto& wipos = *(LONG*)( (BYTE*)&wi.rect + (we.bFirst ? rcPosOff1 : rcPosOff2) );
+			wipos = pos;
+		}
+
+		m_wndDividePreview->UpdateDivideWindows();
+	}
 }
 
 void CSnapWindowManager::PreSnapInitialize()
@@ -713,13 +772,40 @@ BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg)
 			return FALSE;
 	}
 	m_pCurSnapWnd = msg.pHelper;
-	if (m_wndDividePreview->GetSafeHwnd())
-		m_wndDividePreview->Show();
+	ASSERT(m_nCurSnapWndIdx >= 0);
+	//UINT nFlags = SWP_HIDEWINDOW|SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE|SWP_NOZORDER|SWP_NOOWNERZORDER;
+	//for (int ii = 0; ii < (int)m_vChildRects.size(); ++ii)
+	//{
+	//	if (ii == m_nCurSnapWndIdx)
+	//		continue;
+	//	auto& wnd = m_vChildRects[ii];
+	//	SetWindowPos(wnd.hWndChild, nullptr, 0, 0, 0, 0, nFlags);
+	//}
+	m_wndDividePreview->Show();
 	return TRUE;
 }
 
 void CSnapWindowManager::StopDividing(bool bAbort)
 {
+	ASSERT(m_nCurSnapWndIdx >= 0);
+	UINT nFlags = /*SWP_SHOWWINDOW|*/SWP_NOZORDER|SWP_NOOWNERZORDER|SWP_NOACTIVATE;
+	//if (bAbort)
+	//{
+	//	nFlags |= SWP_NOMOVE | SWP_NOSIZE;
+	//}
+	if (!bAbort)
+	{
+		for (int ii = 0; ii < (int)m_vChildRects.size(); ++ii)
+		{
+			if (ii == m_nCurSnapWndIdx)
+				continue;
+			auto& wnd = m_vChildRects[ii];
+			CRect rc = wnd.rect;
+			m_pWndOwner->ScreenToClient(&rc);
+			SetWindowPos(wnd.hWndChild, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), nFlags);
+		}
+	}
+
 	m_wndDividePreview->Hide();
 }
 
@@ -727,6 +813,53 @@ BOOL CSnapWindowManager::CalcMinMaxDividingPos(const SnapWndMsg& msg, MinMaxDivi
 {
 	minmax.nMin = LONG_MIN;
 	minmax.nMax = LONG_MAX;
+
+	size_t rcPosOff1 = 0, rcPosOff2 = 0;
+	size_t ptPosOff = 0;
+	if (m_div.vertical)
+	{
+		rcPosOff1 = offsetof(RECT, left);
+		rcPosOff2 = offsetof(RECT, right);
+		ptPosOff = offsetof(POINT, x);
+	}
+	else
+	{
+		rcPosOff1 = offsetof(RECT, top);
+		rcPosOff2 = offsetof(RECT, bottom);
+		ptPosOff = offsetof(POINT, y);
+	}
+
+	MINMAXINFO minmaxDefault = { 0 };
+	minmaxDefault.ptMinTrackSize.x = GetSystemMetrics(SM_CXMINTRACK);
+	minmaxDefault.ptMinTrackSize.y = GetSystemMetrics(SM_CYMINTRACK);
+	minmaxDefault.ptMaxTrackSize.x = GetSystemMetrics(SM_CXMAXTRACK);
+	minmaxDefault.ptMaxTrackSize.y = GetSystemMetrics(SM_CYMAXTRACK);
+
+	for (auto& we : m_div.wnds)
+	{
+		MINMAXINFO mmi = minmaxDefault;
+		auto& wi = m_vChildRects[we.rectIdx];
+		SendMessage(wi.hWndChild, WM_GETMINMAXINFO, 0, (LPARAM)&mmi);
+
+		RECT rect;
+		GetWindowRect(wi.hWndChild, &rect);
+
+		LONG nMin = 0, nMax = 0;
+		if (we.bFirst)
+		{
+			auto rcMax = *(LONG*)((BYTE*)&rect + rcPosOff2);
+			nMin = rcMax - *(LONG*)((BYTE*)&mmi.ptMaxTrackSize + ptPosOff);
+			nMax = rcMax - *(LONG*)((BYTE*)&mmi.ptMinTrackSize + ptPosOff);
+		}
+		else
+		{
+			auto rcMin = *(LONG*)((BYTE*)&rect + rcPosOff1);
+			nMin = rcMin + *(LONG*)((BYTE*)&mmi.ptMinTrackSize + ptPosOff);
+			nMax = rcMin + *(LONG*)((BYTE*)&mmi.ptMaxTrackSize + ptPosOff);
+		}
+		minmax.nMin = std::max(minmax.nMin, nMin);
+		minmax.nMax = std::min(minmax.nMax, nMax);
+	}
 
 	return TRUE;
 }

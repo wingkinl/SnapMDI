@@ -13,8 +13,6 @@ class CGhostDividerRenderImpAlpha : public CLayeredAnimationWndRenderImpAlpha
 public:
 	BOOL HandlePaint() override;
 
-	void OnAnimationUpdate() override;
-
 	bool NeedGDIPlus() const override { return false; }
 };
 
@@ -57,11 +55,6 @@ BOOL CGhostDividerRenderImpAlpha::HandlePaint()
 	dc.SelectObject(oldBrush);
 	dc.SelectObject(oldPen);
 	return TRUE;
-}
-
-void CGhostDividerRenderImpAlpha::OnAnimationUpdate()
-{
-
 }
 
 CGhostDividerWnd::CGhostDividerWnd(CSnapWindowManager* pManager, bool bVertical)

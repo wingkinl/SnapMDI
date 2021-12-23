@@ -219,7 +219,10 @@ void CDividePreviewWnd::Hide()
 
 void CDividePreviewWnd::UpdateDivideWindows()
 {
-
+	if (m_renderImp)
+	{
+		m_renderImp->OnAnimationUpdate();
+	}
 }
 
 void CDividePreviewWnd::EnumDivideWindows(EnumDivideWindowsProc pProc, LPARAM lParam) const
