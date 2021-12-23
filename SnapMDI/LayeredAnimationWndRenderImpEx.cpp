@@ -119,6 +119,11 @@ void CLayeredAnimationWndRenderImpAlpha::StartRendering()
 {
 	__super::StartRendering();
 
+	UpdateBitmap();
+}
+
+bool CLayeredAnimationWndRenderImpAlpha::UpdateBitmap()
+{
 	CRect rcCanvas;
 	GetRect(rcCanvas, RectType::Canvas);
 
@@ -129,13 +134,17 @@ void CLayeredAnimationWndRenderImpAlpha::StartRendering()
 
 		m_pBits = NULL;
 		HBITMAP hBitmap = CDrawingManager::CreateBitmap_32(size, (void**)&m_pBits);
-		if (!hBitmap)
+		if (!hBitmap || !m_pBits)
 		{
-			return;
+			ASSERT(0);
+			return false;
 		}
 		m_bmp.Attach(hBitmap);
 		m_szBmp = size;
+		return true;
 	}
+	// not updated
+	return false;
 }
 
 void CLayeredAnimationWndRenderImpAlpha::UpdateRoundedRectPath(Gdiplus::GraphicsPath& path, const CRect& rect, int diameter)

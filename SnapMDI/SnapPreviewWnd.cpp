@@ -112,7 +112,6 @@ public:
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
 			Gdiplus::Color color(150, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
 			Gdiplus::SolidBrush brush(Gdiplus::Color(200, 0xcc, 0xcc, 0xcc));
-			Gdiplus::Rect rc(rect.left, rect.top, rect.Width(), rect.Height());
 
 			Gdiplus::GraphicsPath path;
 			int diameter = GetSystemMetrics(SM_CXVSCROLL);

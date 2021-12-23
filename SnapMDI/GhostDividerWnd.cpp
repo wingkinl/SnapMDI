@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "GhostDividerWnd.h"
 #include "LayeredAnimationWndRenderImpEx.h"
+#include "SnapWindowManager.h"
 #include <algorithm>
 
 #undef min
@@ -15,8 +16,6 @@ public:
 	void OnAnimationUpdate() override;
 
 	bool NeedGDIPlus() const override { return false; }
-
-	bool m_bVertical = false;
 };
 
 void CGhostDividerRenderImpAlpha::HandlePaint()
@@ -34,17 +33,20 @@ void CGhostDividerRenderImpAlpha::HandlePaint()
 	auto oldPen = dc.SelectObject(GetStockObject(NULL_PEN));
 	dc.Rectangle(rect);
 
-	auto drag = GetSystemMetrics(m_bVertical ? SM_CXDLGFRAME : SM_CYDLGFRAME);
+	auto pDividerWnd = (CGhostDividerWnd*)m_pWnd;
+	bool bVertical = pDividerWnd->IsVertical();
+
+	auto drag = GetSystemMetrics(bVertical ? SM_CXDLGFRAME : SM_CYDLGFRAME);
 	auto dragcx = drag;
-	auto dragcy = GetSystemMetrics(m_bVertical ? SM_CXVSCROLL : SM_CYHSCROLL) * 2;
-	if (!m_bVertical)
+	auto dragcy = GetSystemMetrics(bVertical ? SM_CXVSCROLL : SM_CYHSCROLL) * 2;
+	if (!bVertical)
 		std::swap(dragcx, dragcy);
 
 	rect.left += (rect.Width() - dragcx) / 2;
 	rect.top += (rect.Height() - dragcy) / 2;
 	rect.right = rect.left + dragcx;
 	rect.bottom = rect.top + dragcy;
-	if (m_bVertical)
+	if (bVertical)
 		++rect.right;
 	else
 		++rect.bottom;
@@ -62,10 +64,20 @@ void CGhostDividerRenderImpAlpha::OnAnimationUpdate()
 
 }
 
-CGhostDividerWnd::CGhostDividerWnd(BOOL bVertical)
+CGhostDividerWnd::CGhostDividerWnd(CSnapWindowManager* pManager, bool bVertical)
 {
+	m_pManager = pManager;
 	m_bVertical = bVertical;
 }
+
+CGhostDividerWnd::~CGhostDividerWnd()
+{
+	DestroyWindow();
+}
+
+BEGIN_MESSAGE_MAP(CGhostDividerWnd, CGhostDividerWndBase)
+	ON_WM_SHOWWINDOW()
+END_MESSAGE_MAP()
 
 void CGhostDividerWnd::Create(CWnd* pWndOwner, const POINT& pos, LONG length)
 {
@@ -75,10 +87,9 @@ void CGhostDividerWnd::Create(CWnd* pWndOwner, const POINT& pos, LONG length)
 	m_renderImp = std::make_shared<CGhostDividerRenderImpAlpha>();
 	ASSERT(m_renderImp);
 	m_renderImp->AttachToLayeredAnimationWnd(this);
-	((CGhostDividerRenderImpAlpha*)m_renderImp.get())->m_bVertical = m_bVertical;
 
 	int cx = GetSystemMetrics(m_bVertical ? SM_CXVSCROLL : SM_CYHSCROLL);
-	CSize szInflate(cx / 2, 0);
+	CSize szInflate(cx / 2+1, 0);
 	CSize size(0, length);
 	if (!m_bVertical)
 	{
@@ -90,7 +101,7 @@ void CGhostDividerWnd::Create(CWnd* pWndOwner, const POINT& pos, LONG length)
 
 	m_renderImp->Create(pWndOwner, &rect);
 
-	SetLayeredWindowAttributes(0, 0, LWA_ALPHA);
+	SetLayeredWindowAttributes(0, ShouldDoAnimation() ? 0 : 255, LWA_ALPHA);
 }
 
 BOOL CGhostDividerWnd::PreCreateWindow(CREATESTRUCT& cs)
@@ -157,5 +168,15 @@ void CGhostDividerWnd::OnAnimationTimer(double timeDiff)
 	if (bFinish)
 	{
 		FinishAnimationCleanup();
+	}
+}
+
+void CGhostDividerWnd::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	__super::OnShowWindow(bShow, nStatus);
+	// nStatus: It is 0 if the message is sent because of a ShowWindow member function call;
+	if (!bShow && !nStatus)
+	{
+		m_pManager->OnGhostDividerWndHidden(this);
 	}
 }

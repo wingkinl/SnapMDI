@@ -45,6 +45,8 @@ public:
 protected:
 	virtual bool NeedGDIPlus() const { return true; }
 
+	virtual bool UpdateBitmap();
+
 	CBitmap	m_bmp;
 	LPBYTE	m_pBits = nullptr;
 	CSize	m_szBmp;

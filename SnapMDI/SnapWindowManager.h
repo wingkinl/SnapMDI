@@ -36,6 +36,14 @@ public:
 protected:
 	SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg);
 
+	void HandleEnterSizeMove(SnapWndMsg& msg);
+	
+	void HandleExitSizeMove(SnapWndMsg& msg);
+
+	void HandleMoving(SnapWndMsg& msg);
+
+	void HandleSizing(SnapWndMsg& msg);
+
 	CSnapPreviewWnd* GetSnapPreview();
 
 	void StartMoving(CSnapWindowHelper* pWndHelper);
@@ -72,6 +80,8 @@ protected:
 	virtual void OnAfterSnapToChild();
 
 	virtual void OnAfterSnapToCustom();
+
+	virtual BOOL EnterDividing(const SnapWndMsg& msg) const;
 
 	struct ChildWndInfo
 	{
@@ -135,6 +145,10 @@ private:
 
 	void CheckShowGhostDivider(SnapWndMsg& msg);
 	void HideLastGhostDivider();
+
+	friend class CGhostDividerWnd;
+
+	void OnGhostDividerWndHidden(CGhostDividerWnd* pWnd);
 protected:
 	friend class CSnapWindowHelper;
 
@@ -142,7 +156,12 @@ protected:
 	CRect	m_rcOwner;
 	std::unique_ptr<CSnapPreviewWnd>	m_wndSnapPreview;
 
-	std::map<POINT, std::unique_ptr<CGhostDividerWnd>>	m_mGhostDividerWnds;
+	struct DividerWndInfo 
+	{
+		POINT pos;
+		std::unique_ptr<CGhostDividerWnd>	wnd;
+	};
+	std::vector<DividerWndInfo>	m_vGhostDividerWnds;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
@@ -167,8 +186,18 @@ protected:
 		bool	vertical = false;
 		// Indices into m_vChildRects
 		std::vector<size_t>	wndIds;
+
+		inline bool IsValid() const { return length > 0; }
+
+		inline void Reset()
+		{
+			length = 0;
+			wndIds.clear();
+		}
 	};
 	StickedWndDiv	m_div;
+
+	friend struct DivideWindowsHelper;
 
 	UINT_PTR	m_nTimerIDSnapSwitch = 0;
 	bool		m_bSwitchPressed = false;
