@@ -66,6 +66,9 @@
     <ClInclude Include="DividePreviewWnd.h">
       <Filter>SnapInChild</Filter>
     </ClInclude>
+    <ClInclude Include="SnapRenderImp.h">
+      <Filter>SnapInChild</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SnapMDI.cpp">
@@ -102,6 +105,9 @@
       <Filter>SnapInChild</Filter>
     </ClCompile>
     <ClCompile Include="DividePreviewWnd.cpp">
+      <Filter>SnapInChild</Filter>
+    </ClCompile>
+    <ClCompile Include="SnapRenderImp.cpp">
       <Filter>SnapInChild</Filter>
     </ClCompile>
   </ItemGroup>

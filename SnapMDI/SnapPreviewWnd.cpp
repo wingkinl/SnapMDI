@@ -2,25 +2,17 @@
 #include "framework.h"
 #include "SnapPreviewWnd.h"
 #include "LayeredAnimationWndRenderImpEx.h"
+#include "SnapRenderImp.h"
 
-class CSnapPreviewRenderImpDirectComposition : public CLayeredAnimationWndRenderImpDirectComposition
+class CSnapPreviewRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
 {
 public:
-	void CreateDeviceResourcesEx(ID2D1DeviceContext* pDC) override
-	{
-		D2D_COLOR_F const color = { 0.26f, 0.56f, 0.87f, 0.5f };
-		HR(pDC->CreateSolidColorBrush(color,
-			m_brush.ReleaseAndGetAddressOf()));
-	}
-
 	void OnAnimationUpdate() override
 	{
 		GetRect(m_rect, RectType::CurTarget);
 		m_pWnd->ScreenToClient(&m_rect);
 
-		m_pWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
-			SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
-		m_pWnd->RedrawWindow();
+		__super::OnAnimationUpdate();
 	}
 
 	void HandlePaint() override
@@ -42,31 +34,8 @@ public:
 				DPtoLP(offset.y, m_dpi.y)));
 
 			dc->Clear();
-			D2D_RECT_F rect;
-			rect.left = DPtoLP(m_rect.left, m_dpi.x);
-			rect.top = DPtoLP(m_rect.top, m_dpi.y);
-			rect.right = DPtoLP(m_rect.right, m_dpi.y);
-			rect.bottom = DPtoLP(m_rect.bottom, m_dpi.y);
-			//dc->FillRectangle(rect, m_brush.Get());
-			D2D1_ROUNDED_RECT rRect;
-			rRect.rect = rect;
-			int width = GetSystemMetrics(SM_CXVSCROLL) / 2;
-			auto gap = DPtoLP(width, m_dpi.x);
 
-			rRect.radiusX = 10;
-			rRect.radiusY = 10;
-
-			m_brush->SetColor({ 0.8f, 0.8f, 0.8f, 0.78f });
-			//dc->FillRectangle(rect, m_brush.Get());
-			dc->FillRoundedRectangle(rRect, m_brush.Get());
-
-			m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.58f });
-
-			rRect.rect.left += gap;
-			rRect.rect.top += gap;
-			rRect.rect.right -= gap;
-			rRect.rect.bottom -= gap;
-			dc->FillRoundedRectangle(rRect, m_brush.Get());
+			PaintSnapRect(dc.Get(), m_rect);
 
 			HR(m_surface->EndDraw());
 			HR(m_device->Commit());
@@ -79,10 +48,9 @@ public:
 	}
 private:
 	CRect	m_rect;
-	ComPtr<ID2D1SolidColorBrush>	m_brush;
 };
 
-class CSnapPreviewRenderImpAlpha : public CLayeredAnimationWndRenderImpAlpha
+class CSnapPreviewRenderImpAlpha : public CSnapRenderImpBaseAlpha
 {
 public:
 	void OnAnimationUpdate() override
@@ -106,26 +74,8 @@ public:
 		GetRect(rect, RectType::CurTarget);
 		m_pWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
-		{
-			COLORREF crfFill = RGB(66, 143, 222);
 
-			Gdiplus::Graphics gg(dc.GetSafeHdc());
-			Gdiplus::Color color(150, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
-			Gdiplus::SolidBrush brush(Gdiplus::Color(200, 0xcc, 0xcc, 0xcc));
-
-			Gdiplus::GraphicsPath path;
-			int diameter = GetSystemMetrics(SM_CXVSCROLL);
-			UpdateRoundedRectPath(path, rect, diameter);
-
-			gg.FillPath(&brush, &path);
-
-			path.Reset();
-
-			brush.SetColor(color);
-			rect.DeflateRect(diameter/2, diameter/2);
-			UpdateRoundedRectPath(path, rect, diameter);
-			gg.FillPath(&brush, &path);
-		}
+		PaintSnapRect(dc, rect);
 
 		BLENDFUNCTION bf;
 		bf.BlendOp = AC_SRC_OVER;
@@ -170,6 +120,7 @@ public:
 
 CSnapPreviewWnd::CSnapPreviewWnd()
 {
+	
 }
 
 void CSnapPreviewWnd::Create(CWnd* pWndOwner)
