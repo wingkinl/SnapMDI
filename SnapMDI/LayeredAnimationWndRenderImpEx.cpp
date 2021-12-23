@@ -20,7 +20,6 @@ void CLayeredAnimationWndRenderImp::StartRendering()
 	CRect rcCanvas;
 	if (GetRect(rcCanvas, RectType::Canvas))
 	{
-		ASSERT(!m_pWnd->IsWindowVisible());
 		m_pWnd->SetWindowPos(&CWnd::wndTop, rcCanvas.left, rcCanvas.top, rcCanvas.Width(), rcCanvas.Height(),
 			SWP_NOACTIVATE | SWP_NOREDRAW);
 	}
@@ -36,8 +35,7 @@ BOOL CLayeredAnimationWndRenderImp::OnWndMsg(UINT message, WPARAM wParam, LPARAM
 	switch (message)
 	{
 	case WM_PAINT:
-		HandlePaint();
-		break;
+		return HandlePaint();
 	}
 	return FALSE;
 }
@@ -60,7 +58,7 @@ BOOL CLayeredAnimationWndRenderImp::GetRect(CRect& rect, RectType type) const
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-void CLayeredAnimationWndRenderImpInvert::HandlePaint()
+BOOL CLayeredAnimationWndRenderImpInvert::HandlePaint()
 {
 	CPaintDC dc(m_pWnd);
 
@@ -74,6 +72,7 @@ void CLayeredAnimationWndRenderImpInvert::HandlePaint()
 	CBrush* pBrushOld = dc.SelectObject(&brFill);
 	dc.PatBlt(0, 0, rect.Width(), rect.Height(), PATINVERT);
 	dc.SelectObject(pBrushOld);
+	return TRUE;
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -11,14 +11,14 @@
 class CGhostDividerRenderImpAlpha : public CLayeredAnimationWndRenderImpAlpha
 {
 public:
-	void HandlePaint() override;
+	BOOL HandlePaint() override;
 
 	void OnAnimationUpdate() override;
 
 	bool NeedGDIPlus() const override { return false; }
 };
 
-void CGhostDividerRenderImpAlpha::HandlePaint()
+BOOL CGhostDividerRenderImpAlpha::HandlePaint()
 {
 	CPaintDC dc(m_pWnd);
 
@@ -56,7 +56,7 @@ void CGhostDividerRenderImpAlpha::HandlePaint()
 
 	dc.SelectObject(oldBrush);
 	dc.SelectObject(oldPen);
-
+	return TRUE;
 }
 
 void CGhostDividerRenderImpAlpha::OnAnimationUpdate()

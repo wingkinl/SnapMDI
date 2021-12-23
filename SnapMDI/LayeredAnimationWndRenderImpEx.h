@@ -19,7 +19,7 @@ using namespace D2D1;
 class CLayeredAnimationWndRenderImpInvert : public CLayeredAnimationWndRenderImp
 {
 public:
-	void HandlePaint() override;
+	BOOL HandlePaint() override;
 };
 
 

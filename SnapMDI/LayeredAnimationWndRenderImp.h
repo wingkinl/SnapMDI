@@ -22,7 +22,7 @@ public:
 
 	virtual BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult);
 
-	virtual void HandlePaint() {}
+	virtual BOOL HandlePaint() { return FALSE; }
 
 	enum class RectType
 	{

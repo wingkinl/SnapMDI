@@ -15,7 +15,7 @@ public:
 		__super::OnAnimationUpdate();
 	}
 
-	void HandlePaint() override
+	BOOL HandlePaint() override
 	{
 		try
 		{
@@ -45,6 +45,7 @@ public:
 		{
 			ReleaseDeviceResources();
 		}
+		return TRUE;
 	}
 private:
 	CRect	m_rect;
@@ -94,7 +95,7 @@ public:
 		}
 	}
 
-	void HandlePaint() override
+	BOOL HandlePaint() override
 	{
 		CPaintDC dc(m_pWnd);
 
@@ -115,6 +116,7 @@ public:
 
 		dc.SelectObject(oldBrush);
 		dc.SelectObject(oldPen);
+		return TRUE;
 	}
 };
 
