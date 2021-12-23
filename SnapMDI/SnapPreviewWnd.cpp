@@ -215,11 +215,11 @@ void CSnapPreviewWnd::StartSnapping()
 	}
 }
 
-void CSnapPreviewWnd::StopSnapping(bool bAbort)
+void CSnapPreviewWnd::StopSnapping()
 {
 	if (m_renderImp)
 	{
-		m_renderImp->StopRendering(bAbort);
+		m_renderImp->StopRendering();
 		m_aniStage = AnimateStage::Hiding;
 		FinishAnimationCleanup();
 		m_pActiveSnapWnd = nullptr;

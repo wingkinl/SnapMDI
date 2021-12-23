@@ -16,7 +16,7 @@ public:
 
 	virtual void StartRendering();
 
-	virtual void StopRendering(bool bAbort);
+	virtual void StopRendering();
 
 	virtual void OnAnimationUpdate() {}
 

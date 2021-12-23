@@ -12,7 +12,7 @@ public:
 	void Create(CWnd* pWndOwner);
 
 	void StartSnapping();
-	void StopSnapping(bool bAbort);
+	void StopSnapping();
 
 	// rect in screen coordinates
 	void ShowAt(CWnd* pActiveSnapWnd, const CRect& rect);

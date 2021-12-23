@@ -26,7 +26,7 @@ void CLayeredAnimationWndRenderImp::StartRendering()
 	}
 }
 
-void CLayeredAnimationWndRenderImp::StopRendering(bool bAbort)
+void CLayeredAnimationWndRenderImp::StopRendering()
 {
 	//
 }

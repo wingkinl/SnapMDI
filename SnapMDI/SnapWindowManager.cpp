@@ -3,6 +3,7 @@
 #include "SnapWindowManager.h"
 #include "SnapPreviewWnd.h"
 #include "GhostDividerWnd.h"
+#include "DividePreviewWnd.h"
 #include <algorithm>
 
 #undef min
@@ -513,6 +514,10 @@ void CSnapWindowManager::HandleExitSizeMove(SnapWndMsg& msg)
 		StopMoving(m_bAborted || !CanDoSnapping(m_snapTarget));
 		m_bIsMoving = FALSE;
 	}
+	else if (m_wndDividePreview->GetSafeHwnd())
+	{
+		m_wndDividePreview->Hide();
+	}
 	m_snapTarget = SnapTargetType::None;
 	m_bEnterSizeMove = FALSE;
 }
@@ -549,16 +554,6 @@ void CSnapWindowManager::HandleSizing(SnapWndMsg& msg)
 	// TODO
 }
 
-CSnapPreviewWnd* CSnapWindowManager::GetSnapPreview()
-{
-	if (!m_wndSnapPreview)
-	{
-		m_wndSnapPreview.reset(new CSnapPreviewWnd());
-		m_wndSnapPreview->Create(m_pWndOwner);
-	}
-	return m_wndSnapPreview.get();
-}
-
 void CSnapWindowManager::PreSnapInitialize()
 {
 	if (s_nHotRgnSize < 0)
@@ -580,7 +575,12 @@ void CSnapWindowManager::PreSnapInitialize()
 
 void CSnapWindowManager::StartMoving(CSnapWindowHelper* pWndHelper)
 {
-	auto pSnapWnd = GetSnapPreview();
+	if (!m_wndSnapPreview)
+	{
+		m_wndSnapPreview.reset(new CSnapPreviewWnd());
+		m_wndSnapPreview->Create(m_pWndOwner);
+	}
+	auto pSnapWnd = m_wndSnapPreview.get();
 	if (pSnapWnd)
 	{
 		m_pCurSnapWnd = pWndHelper;
@@ -600,7 +600,7 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 		return;
 	EnableSnapSwitchCheck(false);
 
-	m_wndSnapPreview->StopSnapping(bAbort);
+	m_wndSnapPreview->StopSnapping();
 
 	if (!bAbort && m_curGrid.type != SnapGridType::None)
 	{
@@ -701,7 +701,17 @@ BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg)
 {
 	if (GetKeyState(VK_LBUTTON) > 0)
 		return FALSE;
-	return CalcMinMaxDividingPos(msg, m_minmaxDiv);
+	if (!CalcMinMaxDividingPos(msg, m_minmaxDiv))
+		return FALSE;
+	if (!m_wndDividePreview)
+	{
+		m_wndDividePreview.reset(new CDividePreviewWnd());
+		if (!m_wndDividePreview->Create(m_pWndOwner))
+			return FALSE;
+	}
+	if (m_wndDividePreview->GetSafeHwnd())
+		m_wndDividePreview->Show();
+	return TRUE;
 }
 
 BOOL CSnapWindowManager::CalcMinMaxDividingPos(const SnapWndMsg& msg, MinMaxDivideInfo& minmax) const
@@ -986,13 +996,13 @@ void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 	}
 	else
 	{
-		HideLastGhostDivider();
+		HideGhostDividers();
 	}
 }
 
 void CSnapWindowManager::HandleNCMouseLeave(SnapWndMsg& msg)
 {
-	HideLastGhostDivider();
+	HideGhostDividers();
 }
 
 #ifdef _DEBUG
@@ -1059,23 +1069,16 @@ static bool operator<(const POINT& l, const POINT& r)
 	return (l.x < r.x || (l.x == r.x && l.y < r.y));
 }
 
-void CSnapWindowManager::HideLastGhostDivider()
+void CSnapWindowManager::HideGhostDividers()
 {
-	if (!m_div.valid)
-		return;
 #ifdef DEBUG_DIVIDER_SHOW_HIDE
 	TRACE("-- Hide     %d,%d v=%d\r\n", m_div.pos.x, m_div.pos.y, m_div.vertical);
 #endif // DEBUG_DIVIDER_SHOW_HIDE
-
+	m_div.valid = false;
 	DivideWindowsHelper helper;
 	for (auto& wi : m_vGhostDividerWnds)
 	{
-		if (helper.MatchDividerWindow(m_div, wi))
-		{
-			wi.wnd->Hide();
-			m_div.valid = false;
-			break;
-		}
+		wi.wnd->Hide();
 	}
 }
 

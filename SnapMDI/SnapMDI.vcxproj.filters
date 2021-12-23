@@ -63,6 +63,9 @@
     <ClInclude Include="GhostDividerWnd.h">
       <Filter>SnapInChild</Filter>
     </ClInclude>
+    <ClInclude Include="DividePreviewWnd.h">
+      <Filter>SnapInChild</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SnapMDI.cpp">
@@ -96,6 +99,9 @@
       <Filter>SnapInChild</Filter>
     </ClCompile>
     <ClCompile Include="GhostDividerWnd.cpp">
+      <Filter>SnapInChild</Filter>
+    </ClCompile>
+    <ClCompile Include="DividePreviewWnd.cpp">
       <Filter>SnapInChild</Filter>
     </ClCompile>
   </ItemGroup>

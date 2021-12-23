@@ -6,6 +6,7 @@
 
 class CSnapPreviewWnd;
 class CGhostDividerWnd;
+class CDividePreviewWnd;
 class CSnapWindowHelper;
 
 struct SnapWndMsg
@@ -43,8 +44,6 @@ protected:
 	void HandleMoving(SnapWndMsg& msg);
 
 	void HandleSizing(SnapWndMsg& msg);
-
-	CSnapPreviewWnd* GetSnapPreview();
 
 	void StartMoving(CSnapWindowHelper* pWndHelper);
 
@@ -152,7 +151,7 @@ private:
 	void HandleNCMouseLeave(SnapWndMsg& msg);
 
 	void CheckShowGhostDivider(SnapWndMsg& msg);
-	void HideLastGhostDivider();
+	void HideGhostDividers();
 
 	friend class CGhostDividerWnd;
 
@@ -170,6 +169,8 @@ protected:
 		std::unique_ptr<CGhostDividerWnd>	wnd;
 	};
 	std::vector<DividerWndInfo>	m_vGhostDividerWnds;
+
+	std::unique_ptr<CDividePreviewWnd>	m_wndDividePreview;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
