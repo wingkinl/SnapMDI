@@ -81,7 +81,15 @@ protected:
 
 	virtual void OnAfterSnapToCustom();
 
-	virtual BOOL EnterDividing(const SnapWndMsg& msg) const;
+	virtual BOOL EnterDividing(const SnapWndMsg& msg);
+
+	struct MinMaxDivideInfo 
+	{
+		LONG nMin;
+		LONG nMax;
+	};
+
+	virtual BOOL CalcMinMaxDividingPos(const SnapWndMsg& msg, MinMaxDivideInfo& minmax) const;
 
 	struct ChildWndInfo
 	{
@@ -115,7 +123,7 @@ protected:
 	{
 		SnapGridType	type;
 		CRect			rect;
-		const ChildWndInfo*	childInfo;
+		ChildWndInfo	childInfo;
 	};
 	virtual SnapGridInfo GetSnapGridInfo(CPoint pt) const;
 
@@ -175,6 +183,12 @@ protected:
 
 	std::vector<ChildWndInfo>	m_vChildRects;
 
+	struct WndEdge
+	{
+		size_t	rectIdx;	// points to m_vChildRects
+		bool	bFirst;		// first edge or the second
+	};
+
 	struct StickedWndDiv
 	{
 		// The starting point
@@ -184,18 +198,12 @@ protected:
 		POINT	pos = {-1, -1};
 		LONG	length = 0;
 		bool	vertical = false;
-		// Indices into m_vChildRects
-		std::vector<size_t>	wndIds;
+		std::vector<WndEdge>	wnds;
 
-		inline bool IsValid() const { return length > 0; }
-
-		inline void Reset()
-		{
-			length = 0;
-			wndIds.clear();
-		}
+		bool valid = false;
 	};
-	StickedWndDiv	m_div;
+	StickedWndDiv		m_div;
+	MinMaxDivideInfo	m_minmaxDiv = { 0 };
 
 	friend struct DivideWindowsHelper;
 

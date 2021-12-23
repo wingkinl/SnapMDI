@@ -41,11 +41,7 @@ struct AdjacentWindowsHelper
 
 	LONG m_nTolerance = 1;
 
-	struct WndEdge
-	{
-		size_t	rectIdx;	// points to m_vChildRects
-		bool	bFirst;		// first edge or the second
-	};
+	using WndEdge = CSnapWindowManager::WndEdge;
 
 	struct AdjacentWindows
 	{
@@ -345,10 +341,10 @@ void DivideWindowsHelper::CheckStickedWindows(StickedWndDiv& div)
 
 		for (size_t ii = 1; ii < wnds.size(); ++ii)
 		{
-			auto& wnd1 = wnds[ii - 1];
-			auto& wnd2 = wnds[ii];
-			auto& wi1 = m_vChildRects[wnd1.rectIdx];
-			auto& wi2 = m_vChildRects[wnd2.rectIdx];
+			auto& wndEdge1 = wnds[ii - 1];
+			auto& wndEdge2 = wnds[ii];
+			auto& wi1 = m_vChildRects[wndEdge1.rectIdx];
+			auto& wi2 = m_vChildRects[wndEdge2.rectIdx];
 
 			auto v1Min = *(LONG*)((BYTE*)&wi1.rect + divMinOff);
 			auto v1Max = *(LONG*)((BYTE*)&wi1.rect + divMaxOff);
@@ -364,15 +360,15 @@ void DivideWindowsHelper::CheckStickedWindows(StickedWndDiv& div)
 				bNewSticky = false;
 				nCurDivPos2 = v1Min;
 				div.length = v1Max - v1Min;
-				div.wndIds.clear();
-				div.wndIds.push_back(wnd1.rectIdx);
+				div.wnds.clear();
+				div.wnds.push_back(wndEdge1);
 			}
 
 			bool bSticked = v2Min <= nCurDivPos2 + div.length;
 
 			if (bSticked)
 			{
-				div.wndIds.push_back(wnd2.rectIdx);
+				div.wnds.push_back(wndEdge2);
 				auto v2Max = *(LONG*)((BYTE*)&wi2.rect + divMaxOff);
 				auto len = v2Max - nCurDivPos2;
 				if (len > div.length)
@@ -395,8 +391,8 @@ void DivideWindowsHelper::CheckStickedWindows(StickedWndDiv& div)
 					nCurDivPos2 = v2Min;
 					auto v2Max = *(LONG*)((BYTE*)&wi2.rect + divMaxOff);
 					div.length = v2Max - v2Min;
-					div.wndIds.clear();
-					div.wndIds.push_back(wnd2.rectIdx);
+					div.wnds.clear();
+					div.wnds.push_back(wndEdge2);
 				}
 			}
 		}
@@ -491,7 +487,7 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 
 void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
 {
-	if (m_div.IsValid())
+	if (m_div.valid)
 	{
 		m_bEnterSizeMove = EnterDividing(msg);
 	}
@@ -675,7 +671,7 @@ void CSnapWindowManager::OnAfterSnapToOwner()
 void CSnapWindowManager::OnAfterSnapToChild()
 {
 	ASSERT(!m_vChildRects.empty());
-	CRect rectSnap = m_curGrid.childInfo->rect;
+	CRect rectSnap = m_curGrid.childInfo.rect;
 	switch ((SnapGridType)((DWORD)m_curGrid.type & SnapGridSideMask))
 	{
 	case SnapGridType::Left:
@@ -693,7 +689,7 @@ void CSnapWindowManager::OnAfterSnapToChild()
 	}
 	UINT nFlags = SWP_FRAMECHANGED|SWP_NOZORDER|SWP_NOACTIVATE;
 	m_pWndOwner->ScreenToClient(&rectSnap);
-	SetWindowPos(m_curGrid.childInfo->hWndChild, nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
+	SetWindowPos(m_curGrid.childInfo.hWndChild, nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
 }
 
 void CSnapWindowManager::OnAfterSnapToCustom()
@@ -701,10 +697,18 @@ void CSnapWindowManager::OnAfterSnapToCustom()
 
 }
 
-BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg) const
+BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg)
 {
 	if (GetKeyState(VK_LBUTTON) > 0)
 		return FALSE;
+	return CalcMinMaxDividingPos(msg, m_minmaxDiv);
+}
+
+BOOL CSnapWindowManager::CalcMinMaxDividingPos(const SnapWndMsg& msg, MinMaxDivideInfo& minmax) const
+{
+	minmax.nMin = LONG_MIN;
+	minmax.nMax = LONG_MAX;
+
 	return TRUE;
 }
 
@@ -848,7 +852,7 @@ auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& c
 {
 	SnapGridInfo grid = { (SnapGridType)SnapTargetType::None, m_rcOwner };
 	grid.rect = childInfo.rect;
-	grid.childInfo = &childInfo;
+	grid.childInfo = childInfo;
 	CSize szGrid = grid.rect.Size();
 	szGrid.cx /= 2;
 	szGrid.cy /= 2;
@@ -1012,7 +1016,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 	StickedWndDiv div;
 	helper.CheckStickedWindows(div);
 
-	if (div.wndIds.size() < 2)
+	if (div.wnds.size() < 2)
 		return;
 #ifdef DEBUG_DIVIDER_SHOW_HIDE
 	TRACE("++ Show old %d,%d v=%d\r\n", m_div.pos.x, m_div.pos.y, m_div.vertical);
@@ -1020,6 +1024,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 
 	m_vChildRects.swap(helper.m_vChildRects);
 	std::swap(m_div, div);
+	m_div.valid = true;
 	CGhostDividerWnd* pWnd = nullptr;
 
 	for (auto& wi : m_vGhostDividerWnds)
@@ -1056,7 +1061,7 @@ static bool operator<(const POINT& l, const POINT& r)
 
 void CSnapWindowManager::HideLastGhostDivider()
 {
-	if (!m_div.IsValid())
+	if (!m_div.valid)
 		return;
 #ifdef DEBUG_DIVIDER_SHOW_HIDE
 	TRACE("-- Hide     %d,%d v=%d\r\n", m_div.pos.x, m_div.pos.y, m_div.vertical);
@@ -1068,7 +1073,7 @@ void CSnapWindowManager::HideLastGhostDivider()
 		if (helper.MatchDividerWindow(m_div, wi))
 		{
 			wi.wnd->Hide();
-			m_div.Reset();
+			m_div.valid = false;
 			break;
 		}
 	}
