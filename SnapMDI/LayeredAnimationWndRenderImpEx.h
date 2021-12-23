@@ -35,7 +35,7 @@ public:
 		return FALSE;
 	}
 
-	BOOL Create(CWnd* pWndOwner) override;
+	BOOL Create(CWnd* pWndOwner, LPCRECT pRect = nullptr) override;
 
 	BOOL CanSupportAnimation() const override;
 
@@ -73,7 +73,7 @@ class CLayeredAnimationWndRenderImpDirectComposition : public CLayeredAnimationW
 public:
 	static BOOL IsApplicable();
 
-	BOOL Create(CWnd* pWndOwner) override;
+	BOOL Create(CWnd* pWndOwner, LPCRECT pRect = nullptr) override;
 
 	struct ComException
 	{

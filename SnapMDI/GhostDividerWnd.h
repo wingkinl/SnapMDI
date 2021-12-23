@@ -9,10 +9,10 @@ class CGhostDividerWnd : public CGhostDividerWndBase
 public:
 	CGhostDividerWnd(BOOL bVertical);
 
-	void Create(CWnd* pWndOwner);
-
 	// in screen coordinates
-	void Show(const POINT& pos, LONG length);
+	void Create(CWnd* pWndOwner, const POINT& pos, LONG length);
+
+	void Show();
 	void Hide();
 protected:
 	BOOL PreCreateWindow(CREATESTRUCT& cs) override;

@@ -14,6 +14,8 @@ public:
 
 	void OnAnimationUpdate() override;
 
+	bool NeedGDIPlus() const override { return false; }
+
 	bool m_bVertical = false;
 };
 
@@ -32,6 +34,24 @@ void CGhostDividerRenderImpAlpha::HandlePaint()
 	auto oldPen = dc.SelectObject(GetStockObject(NULL_PEN));
 	dc.Rectangle(rect);
 
+	auto drag = GetSystemMetrics(m_bVertical ? SM_CXDLGFRAME : SM_CYDLGFRAME);
+	auto dragcx = drag;
+	auto dragcy = GetSystemMetrics(m_bVertical ? SM_CXVSCROLL : SM_CYHSCROLL) * 2;
+	if (!m_bVertical)
+		std::swap(dragcx, dragcy);
+
+	rect.left += (rect.Width() - dragcx) / 2;
+	rect.top += (rect.Height() - dragcy) / 2;
+	rect.right = rect.left + dragcx;
+	rect.bottom = rect.top + dragcy;
+	if (m_bVertical)
+		++rect.right;
+	else
+		++rect.bottom;
+	CBrush brDrag(RGB(255, 255, 255));
+	dc.SelectObject(&brDrag);
+	dc.RoundRect(rect, CPoint(drag, drag));
+
 	dc.SelectObject(oldBrush);
 	dc.SelectObject(oldPen);
 
@@ -47,7 +67,7 @@ CGhostDividerWnd::CGhostDividerWnd(BOOL bVertical)
 	m_bVertical = bVertical;
 }
 
-void CGhostDividerWnd::Create(CWnd* pWndOwner)
+void CGhostDividerWnd::Create(CWnd* pWndOwner, const POINT& pos, LONG length)
 {
 	ASSERT_VALID(pWndOwner);
 	m_pWndOwner = pWndOwner;
@@ -55,7 +75,21 @@ void CGhostDividerWnd::Create(CWnd* pWndOwner)
 	m_renderImp = std::make_shared<CGhostDividerRenderImpAlpha>();
 	ASSERT(m_renderImp);
 	m_renderImp->AttachToLayeredAnimationWnd(this);
-	m_renderImp->Create(pWndOwner);
+	((CGhostDividerRenderImpAlpha*)m_renderImp.get())->m_bVertical = m_bVertical;
+
+	int cx = GetSystemMetrics(m_bVertical ? SM_CXVSCROLL : SM_CYHSCROLL);
+	CSize szInflate(cx / 2, 0);
+	CSize size(0, length);
+	if (!m_bVertical)
+	{
+		std::swap(szInflate.cx, szInflate.cy);
+		std::swap(size.cx, size.cy);
+	}
+	CRect rect(pos, size);
+	rect.InflateRect(szInflate);
+
+	m_renderImp->Create(pWndOwner, &rect);
+
 	SetLayeredWindowAttributes(0, 0, LWA_ALPHA);
 }
 
@@ -65,20 +99,10 @@ BOOL CGhostDividerWnd::PreCreateWindow(CREATESTRUCT& cs)
 	return __super::PreCreateWindow(cs);
 }
 
-void CGhostDividerWnd::Show(const POINT& pos, LONG length)
+void CGhostDividerWnd::Show()
 {
-	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW;
-	int cx = GetSystemMetrics(m_bVertical ? SM_CXVSCROLL : SM_CYHSCROLL);
-	CSize szInflate(cx/2, 0);
-	CSize size(0, length);
-	if (!m_bVertical)
-	{
-		std::swap(szInflate.cx, szInflate.cy);
-		std::swap(size.cx, size.cy);
-	}
-	CRect rect(pos, size);
-	rect.InflateRect(szInflate);
-	SetWindowPos(&CWnd::wndTop, rect.left, rect.top, rect.Width(), rect.Height(), nFlags);
+	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER;
+	SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0, nFlags);
 	if (ShouldDoAnimation())
 	{
 		m_aniStage = AnimateStage::Showing;

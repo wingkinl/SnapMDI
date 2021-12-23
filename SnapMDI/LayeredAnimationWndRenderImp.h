@@ -10,7 +10,7 @@ public:
 
 	void AttachToLayeredAnimationWnd(CLayeredAnimationWnd* pWnd) { m_pWnd = pWnd; }
 
-	virtual BOOL Create(CWnd* pWndOwner);
+	virtual BOOL Create(CWnd* pWndOwner, LPCRECT pRect = nullptr);
 
 	virtual BOOL CanSupportAnimation() const { return FALSE; }
 

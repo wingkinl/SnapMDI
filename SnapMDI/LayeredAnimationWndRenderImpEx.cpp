@@ -3,10 +3,11 @@
 #include "LayeredAnimationWndRenderImpEx.h"
 #include "LayeredAnimationWnd.h"
 
-BOOL CLayeredAnimationWndRenderImp::Create(CWnd* pWndOwner)
+BOOL CLayeredAnimationWndRenderImp::Create(CWnd* pWndOwner, LPCRECT pRect)
 {
 	CRect rect;
-	rect.SetRectEmpty();
+	if (pRect)
+		rect = *pRect;
 
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = 0;
@@ -86,10 +87,11 @@ CLayeredAnimationWndRenderImpAlpha::~CLayeredAnimationWndRenderImpAlpha()
 	}
 }
 
-BOOL CLayeredAnimationWndRenderImpAlpha::Create(CWnd* pWndOwner)
+BOOL CLayeredAnimationWndRenderImpAlpha::Create(CWnd* pWndOwner, LPCRECT pRect)
 {
 	CRect rect;
-	rect.SetRectEmpty();
+	if (pRect)
+		rect = *pRect;
 
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = WS_EX_LAYERED;
@@ -208,10 +210,11 @@ BOOL CLayeredAnimationWndRenderImpDirectComposition::IsApplicable()
 	return s_bApplicableCheck = bApplicable;
 }
 
-BOOL CLayeredAnimationWndRenderImpDirectComposition::Create(CWnd* pWndOwner)
+BOOL CLayeredAnimationWndRenderImpDirectComposition::Create(CWnd* pWndOwner, LPCRECT pRect)
 {
 	CRect rect;
-	rect.SetRectEmpty();
+	if (pRect)
+		rect = *pRect;
 
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = WS_EX_NOREDIRECTIONBITMAP;

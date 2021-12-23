@@ -948,7 +948,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 
 	if (div.wndIds.size() < 2)
 		return;
-
+	TRACE("+show div %d, %d, v=%d\r\n", div.pos.x, div.pos.y, div.vertical);
 	auto it = m_mGhostDividerWnds.find(div.pos);
 	CGhostDividerWnd* pWnd = nullptr;
 	if (it == m_mGhostDividerWnds.end())
@@ -957,14 +957,14 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 		std::swap(m_div, div);
 
 		pWnd = new CGhostDividerWnd(helper.m_bVertical);
-		pWnd->Create(m_pWndOwner);
-		m_mGhostDividerWnds[div.pos].reset(pWnd);
+		pWnd->Create(m_pWndOwner, m_div.pos, m_div.length);
+		m_mGhostDividerWnds[m_div.pos].reset(pWnd);
 	}
 	else
 	{
 		pWnd = it->second.get();
 	}
-	pWnd->Show(div.pos, div.length);
+	pWnd->Show();
 }
 
 static bool operator<(const POINT& l, const POINT& r)
@@ -974,6 +974,9 @@ static bool operator<(const POINT& l, const POINT& r)
 
 void CSnapWindowManager::HideLastGhostDivider()
 {
+	if (m_div.length <= 0)
+		return;
+	TRACE("-hide div %d, %d, v=%d\r\n", m_div.pos.x, m_div.pos.y, m_div.vertical);
 	auto it = m_mGhostDividerWnds.find(m_div.pos);
 	if (it == m_mGhostDividerWnds.end())
 		return;
