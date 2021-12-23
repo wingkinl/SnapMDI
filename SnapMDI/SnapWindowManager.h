@@ -82,6 +82,8 @@ protected:
 
 	virtual BOOL EnterDividing(const SnapWndMsg& msg);
 
+	virtual void StopDividing(bool bAbort);
+
 	struct MinMaxDivideInfo 
 	{
 		LONG nMin;
@@ -170,6 +172,7 @@ protected:
 	};
 	std::vector<DividerWndInfo>	m_vGhostDividerWnds;
 
+	friend class CDividePreviewWnd;
 	std::unique_ptr<CDividePreviewWnd>	m_wndDividePreview;
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
@@ -183,6 +186,7 @@ protected:
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
 	std::vector<ChildWndInfo>	m_vChildRects;
+	int							m_nCurSnapWndIdx = -1;	// index to m_vChildRects
 
 	struct WndEdge
 	{

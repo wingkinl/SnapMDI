@@ -6,7 +6,7 @@ class CSnapWindowManager;
 
 using CGhostDividerWndBase = CLayeredAnimationWnd;
 
-class CGhostDividerWnd : public CGhostDividerWndBase
+class CGhostDividerWnd final : public CGhostDividerWndBase
 {
 public:
 	CGhostDividerWnd(CSnapWindowManager* pManager, bool bVertical);

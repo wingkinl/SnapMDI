@@ -3,6 +3,7 @@
 #include "DividePreviewWnd.h"
 #include "LayeredAnimationWndRenderImpEx.h"
 #include "SnapRenderImp.h"
+#include "SnapWindowManager.h"
 
 #undef min
 #undef max
@@ -10,14 +11,6 @@
 class CDividePreviewRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
 {
 public:
-	void OnAnimationUpdate() override
-	{
-		//GetRect(m_rect, RectType::CurTarget);
-		//m_pWnd->ScreenToClient(&m_rect);
-
-		__super::OnAnimationUpdate();
-	}
-
 	BOOL HandlePaint() override
 	{
 		try
@@ -38,7 +31,22 @@ public:
 
 			dc->Clear();
 
-			//PaintSnapRect(dc.Get(), m_rect);
+			{
+				struct PaintParams
+				{
+					CDividePreviewRenderImpDirectComposition* pThis;
+					ID2D1DeviceContext* pDC;
+				};
+
+				auto pPreviweWnd = (CDividePreviewWnd*)m_pWnd;
+				auto locPaintRect = [](RECT rect, LPARAM lParam) {
+					auto params = *(PaintParams*)lParam;
+					params.pThis->m_pWnd->ScreenToClient(&rect);
+					params.pThis->PaintSnapRect(params.pDC, rect);
+				};
+				PaintParams params = { this, dc.Get() };
+				pPreviweWnd->EnumDivideWindows(locPaintRect, (LPARAM)&params);
+			}
 
 			HR(m_surface->EndDraw());
 			HR(m_device->Commit());
@@ -72,13 +80,26 @@ public:
 		dc.CreateCompatibleDC(&clientDC);
 
 		CBitmap* pBitmapOld = (CBitmap*)dc.SelectObject(&m_bmp);
-
-		CRect rect;
-		GetRect(rect, RectType::CurTarget);
-		m_pWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 
-		PaintSnapRect(dc, rect);
+		{
+			Gdiplus::Graphics gg(dc.GetSafeHdc());
+
+			struct PaintParams 
+			{
+				CDividePreviewRenderImpAlpha* pThis;
+				Gdiplus::Graphics* pGraphics;
+			};
+
+			auto pPreviweWnd = (CDividePreviewWnd*)m_pWnd;
+			auto locPaintRect = [](RECT rect, LPARAM lParam) {
+				auto params = *(PaintParams*)lParam;
+				params.pThis->m_pWnd->ScreenToClient(&rect);
+				params.pThis->PaintSnapRect(*params.pGraphics, rect);
+			};
+			PaintParams params = {this, &gg};
+			pPreviweWnd->EnumDivideWindows(locPaintRect, (LPARAM)&params);
+		}
 
 		BLENDFUNCTION bf;
 		bf.BlendOp = AC_SRC_OVER;
@@ -107,9 +128,9 @@ public:
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-CDividePreviewWnd::CDividePreviewWnd()
+CDividePreviewWnd::CDividePreviewWnd(CSnapWindowManager* pManager)
 {
-
+	m_pManager = pManager;
 }
 
 BOOL CDividePreviewWnd::Create(CWnd* pWndOwner)
@@ -119,11 +140,11 @@ BOOL CDividePreviewWnd::Create(CWnd* pWndOwner)
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-// 		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
-// 		{
-// 			m_renderImp = std::make_shared<CDividePreviewRenderImpDirectComposition>();
-// 			break;
-// 		}
+		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
+		{
+			m_renderImp = std::make_shared<CDividePreviewRenderImpDirectComposition>();
+			break;
+		}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
 		if (CLayeredAnimationWndRenderImpAlpha::IsApplicable())
@@ -196,9 +217,19 @@ void CDividePreviewWnd::Hide()
 	}
 }
 
-void CDividePreviewWnd::UpdateDivideWindows(DivideWndInfo& wnds)
+void CDividePreviewWnd::UpdateDivideWindows()
 {
 
+}
+
+void CDividePreviewWnd::EnumDivideWindows(EnumDivideWindowsProc pProc, LPARAM lParam) const
+{
+	auto& vChildRects = m_pManager->m_vChildRects;
+	for (int ii = 0; ii < (int)vChildRects.size(); ++ii)
+	{
+		if (ii != m_pManager->m_nCurSnapWndIdx)
+			pProc(vChildRects[ii].rect, lParam);
+	}
 }
 
 BOOL CDividePreviewWnd::PreCreateWindow(CREATESTRUCT& cs)

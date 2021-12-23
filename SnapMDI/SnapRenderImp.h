@@ -17,5 +17,5 @@ protected:
 class CSnapRenderImpBaseAlpha : public CLayeredAnimationWndRenderImpAlpha
 {
 public:
-	void PaintSnapRect(CDC& dc, CRect rect);
+	void PaintSnapRect(Gdiplus::Graphics& gg, CRect rect);
 };

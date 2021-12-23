@@ -76,7 +76,10 @@ public:
 		m_pWnd->ScreenToClient(rect);
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 
-		PaintSnapRect(dc, rect);
+		{
+			Gdiplus::Graphics gg(dc.GetSafeHdc());
+			PaintSnapRect(gg, rect);
+		}
 
 		BLENDFUNCTION bf;
 		bf.BlendOp = AC_SRC_OVER;

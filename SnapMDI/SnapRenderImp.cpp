@@ -50,11 +50,10 @@ void CSnapRenderImpBaseDirectComposition::PaintSnapRect(ID2D1DeviceContext* pDC,
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void CSnapRenderImpBaseAlpha::PaintSnapRect(CDC& dc, CRect rect)
+void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect)
 {
 	COLORREF crfFill = RGB(66, 143, 222);
 
-	Gdiplus::Graphics gg(dc.GetSafeHdc());
 	Gdiplus::Color color(150, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
 	Gdiplus::SolidBrush brush(Gdiplus::Color(200, 0xcc, 0xcc, 0xcc));
 
