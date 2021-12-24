@@ -24,14 +24,14 @@ public:
 
 	void EnumDivideWindows(EnumDivideWindowsProc pProc, LPARAM lParam) const;
 
-	inline float GetAlphaFactor() const { return m_alpha; }
+	inline float GetAlphaFactor() const { return m_factor; }
 private:
 	BOOL PreCreateWindow(CREATESTRUCT& cs) override;
 
 	void OnAnimationTimer(double timeDiff) override;
 private:
 	CSnapWindowManager* m_pManager;
-	float	m_alpha = 0.f;
+	float	m_factor = 0.f;
 };
 
 }

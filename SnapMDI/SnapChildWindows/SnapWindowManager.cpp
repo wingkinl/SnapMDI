@@ -681,26 +681,36 @@ void CSnapWindowManager::OnSnapToCurGrid()
 {
 	SnapWindowGridPos grids;
 	GetSnapWindowGridPosResult(grids);
-
-	if (0 && IsAnimationEnabled())
+	bool bSnapNow = true;
+#if 0
+	if (IsAnimationEnabled())
 	{
+		auto pWnd = GetSnapAssistWnd();
+		if (pWnd)
+		{
+			bSnapNow = false;
+			std::swap(pWnd->m_snapGridsAni, grids);
+		}
 	}
-	else
+#endif // _DEBUG
+	if (bSnapNow)
 	{
 		SnapWindowsToGridResult(grids);
 	}
-// 	if (IsSnapAssistEnabled())
-// 	{
-// 		if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Owner)
-// 		{
-// 			if (m_vChildRects.empty())
-// 				return;
-// 			SnapLayoutWindows layout;
-// 			if (!GetOwnerLayoutForSnapAssist(layout))
-// 				return;
-// 			ShowSnapAssist(std::move(layout));
-// 		}
-// 	}
+#if 0
+	if (IsSnapAssistEnabled())
+	{
+		if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Owner)
+		{
+			if (m_vChildRects.empty())
+				return;
+			SnapLayoutWindows layout;
+			if (!GetOwnerLayoutForSnapAssist(layout))
+				return;
+			ShowSnapAssist(std::move(layout));
+		}
+	}
+#endif // _DEBUG
 }
 
 void CSnapWindowManager::SnapWindowsToGridResult(const SnapWindowGridPos& grids)
@@ -750,6 +760,99 @@ void CSnapWindowManager::GetSnapWindowGridPosResult(SnapWindowGridPos& grids) co
 
 bool CSnapWindowManager::GetOwnerLayoutForSnapAssist(SnapLayoutWindows& layout) const
 {
+	CSize szGrid = m_rcOwner.Size();
+	szGrid.cx /= 2;
+	szGrid.cy /= 2;
+
+	SnapCellInfo cell;
+
+	CWnd* pWnd = m_pCurSnapWnd->GetWnd();
+	HWND hWnd = pWnd->GetSafeHwnd();
+
+	bool b4Cells = false, bSecondCell = false;
+
+	switch (((DWORD)m_curGrid.type & SnapGridSideMask))
+	{
+	case SnapGridType::Right:
+		bSecondCell = true;
+		// fall through
+	case SnapGridType::Left:
+		// Left
+		cell.rect = m_rcOwner;
+		cell.rect.right = m_rcOwner.left + szGrid.cx;
+		layout.layout.cells.push_back(cell);
+		// Right
+		cell.rect = m_rcOwner;
+		cell.rect.left += szGrid.cx;
+		layout.layout.cells.push_back(cell);
+		break;
+	case SnapGridType::Bottom:
+		bSecondCell = true;
+		// fall through
+	case SnapGridType::Top:
+		// Top
+		cell.rect = m_rcOwner;
+		cell.rect.bottom = m_rcOwner.top + szGrid.cy;
+		layout.layout.cells.push_back(cell);
+		// Bottom
+		cell.rect = m_rcOwner;
+		cell.rect.top += szGrid.cy;
+		layout.layout.cells.push_back(cell);
+		break;
+	default:
+		b4Cells = true;
+		break;
+	}
+	if (b4Cells)
+	{
+		// Top left, 0
+		cell.rect = m_rcOwner;
+		cell.rect.right = m_rcOwner.left + szGrid.cx;
+		cell.rect.bottom = cell.rect.top + szGrid.cy;
+		layout.layout.cells.push_back(cell);
+		// Top right, 1
+		cell.rect = m_rcOwner;
+		cell.rect.left += szGrid.cx;
+		cell.rect.bottom = cell.rect.top + szGrid.cy;
+		layout.layout.cells.push_back(cell);
+		// Bottom left, 2
+		cell.rect = m_rcOwner;
+		cell.rect.right = m_rcOwner.left + szGrid.cx;
+		cell.rect.top += szGrid.cy;
+		layout.layout.cells.push_back(cell);
+		// Bottom right, 3
+		cell.rect = m_rcOwner;
+		cell.rect.left += szGrid.cx;
+		cell.rect.top += szGrid.cy;
+		layout.layout.cells.push_back(cell);
+
+		int nIndex = 0;
+		switch (((DWORD)m_curGrid.type & SnapGridSideMask))
+		{
+		default:
+			ASSERT(0);
+			// fall through
+		case (DWORD)SnapGridType::Left | (DWORD)SnapGridType::Top:
+			break;
+		case (DWORD)SnapGridType::Right | (DWORD)SnapGridType::Top:
+			nIndex = 1;
+			break;
+		case (DWORD)SnapGridType::Left | (DWORD)SnapGridType::Bottom:
+			nIndex = 2;
+			break;
+		case (DWORD)SnapGridType::Right | (DWORD)SnapGridType::Bottom:
+			nIndex = 3;
+			break;
+		}
+
+		layout.wnds.resize(4);
+		layout.wnds[nIndex] = hWnd;
+	}
+	else
+	{
+		layout.wnds.resize(2);
+		layout.wnds[bSecondCell] = hWnd;
+	}
 
 	return true;
 }

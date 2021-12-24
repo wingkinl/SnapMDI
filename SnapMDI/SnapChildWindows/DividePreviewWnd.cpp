@@ -202,7 +202,7 @@ void CDividePreviewWnd::Show()
 	}
 	else
 	{
-		m_alpha = 1.0f;
+		m_factor = 1.0f;
 		m_renderImp->OnAnimationUpdate();
 	}
 }
@@ -263,7 +263,7 @@ constexpr double AnimationDuration = 0.4;
 void CDividePreviewWnd::OnAnimationTimer(double timeDiff)
 {
 	float alpha = 0.f;
-	float alphaFrom = m_alpha, alphaTo = 1.0f;
+	float alphaFrom = m_factor, alphaTo = 1.0f;
 	if (m_aniStage == AnimateStage::Hiding)
 	{
 		alphaTo = 0.0f;
@@ -280,7 +280,7 @@ void CDividePreviewWnd::OnAnimationTimer(double timeDiff)
 		alpha = std::max(alpha, 0.0f);
 		alpha = std::min(alpha, 1.0f);
 	}
-	m_alpha = alpha;
+	m_factor = alpha;
 
 	if (m_renderImp)
 	{

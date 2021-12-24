@@ -3,6 +3,9 @@
 #include "SnapRenderImp.h"
 #include "SnapWindowManager.h"
 
+#undef min
+#undef max
+
 namespace SnapChildWindows {
 
 class CSnapAssistRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
@@ -29,20 +32,20 @@ public:
 			dc->Clear();
 
 			{
-				//struct PaintParams
-				//{
-				//	CSnapAssistRenderImpDirectComposition* pThis;
-				//	ID2D1DeviceContext* pDC;
-				//};
+				struct PaintParams
+				{
+					CSnapAssistRenderImpDirectComposition* pThis;
+					ID2D1DeviceContext* pDC;
+				};
 
-				//auto pPreviweWnd = (CSnapAssistWnd*)m_pWnd;
-				//auto locPaintRect = [](RECT rect, LPARAM lParam) {
-				//	auto params = *(PaintParams*)lParam;
-				//	params.pThis->m_pWnd->ScreenToClient(&rect);
-				//	params.pThis->PaintSnapRect(params.pDC, rect);
-				//};
-				//PaintParams params = { this, dc.Get() };
-				//pPreviweWnd->EnumDivideWindows(locPaintRect, (LPARAM)&params);
+				auto pWnd = (CSnapAssistWnd*)m_pWnd;
+				auto locPaintRect = [](RECT rect, LPARAM lParam) {
+					auto params = *(PaintParams*)lParam;
+					params.pThis->m_pWnd->ScreenToClient(&rect);
+					params.pThis->PaintSnapRect(params.pDC, rect);
+				};
+				PaintParams params = { this, dc.Get() };
+				pWnd->EnumLayoutCellWindows(locPaintRect, (LPARAM)&params);
 			}
 
 			HR(m_surface->EndDraw());
@@ -79,22 +82,22 @@ public:
 		ZeroMemory(m_pBits, size.cx * size.cy * 4);
 
 		{
-			//Gdiplus::Graphics gg(dc.GetSafeHdc());
+			Gdiplus::Graphics gg(dc.GetSafeHdc());
 
-			//struct PaintParams 
-			//{
-			//	CSnapAssistRenderImpAlpha* pThis;
-			//	Gdiplus::Graphics* pGraphics;
-			//};
+			struct PaintParams 
+			{
+				CSnapAssistRenderImpAlpha* pThis;
+				Gdiplus::Graphics* pGraphics;
+			};
 
-			//auto pPreviweWnd = (CSnapAssistWnd*)m_pWnd;
-			//auto locPaintRect = [](RECT rect, LPARAM lParam) {
-			//	auto params = *(PaintParams*)lParam;
-			//	params.pThis->m_pWnd->ScreenToClient(&rect);
-			//	params.pThis->PaintSnapRect(*params.pGraphics, rect);
-			//};
-			//PaintParams params = {this, &gg};
-			//pPreviweWnd->EnumDivideWindows(locPaintRect, (LPARAM)&params);
+			auto pWnd = (CSnapAssistWnd*)m_pWnd;
+			auto locPaintRect = [](RECT rect, LPARAM lParam) {
+				auto params = *(PaintParams*)lParam;
+				params.pThis->m_pWnd->ScreenToClient(&rect);
+				params.pThis->PaintSnapRect(*params.pGraphics, rect);
+			};
+			PaintParams params = {this, &gg};
+			pWnd->EnumLayoutCellWindows(locPaintRect, (LPARAM)&params);
 		}
 
 		BLENDFUNCTION bf;
@@ -135,11 +138,11 @@ BOOL CSnapAssistWnd::Create(CWnd* pWndOwner)
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
-		{
-			m_renderImp = std::make_shared<CSnapAssistRenderImpDirectComposition>();
-			break;
-		}
+// 		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
+// 		{
+// 			m_renderImp = std::make_shared<CSnapAssistRenderImpDirectComposition>();
+// 			break;
+// 		}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
 		if (CLayeredAnimationWndRenderImpAlpha::IsApplicable())
@@ -166,12 +169,42 @@ BOOL CSnapAssistWnd::Create(CWnd* pWndOwner)
 
 void CSnapAssistWnd::Show()
 {
+	if (!m_renderImp)
+	{
+		ASSERT(0);
+		return;
+	}
+	ASSERT(m_pWndOwner);
+	m_pWndOwner->GetClientRect(&m_rcOwner);
+	m_pWndOwner->ClientToScreen(&m_rcOwner);
 
+	m_renderImp->StartRendering();
+
+	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER;
+	SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0, nFlags);
+
+	if (!m_snapGridsAni.wnds.empty() && ShouldDoAnimation())
+	{
+		m_aniStage = AnimateStage::Showing;
+		m_bShowLayoutCell = false;
+		ScheduleAnimation();
+	}
+	else
+	{
+		m_bShowLayoutCell = true;
+		m_renderImp->OnAnimationUpdate();
+	}
 }
 
-void CSnapAssistWnd::Hide(bool bStopNow)
+void CSnapAssistWnd::EnumLayoutCellWindows(EnumLayoutCellWindowsProc pProc, LPARAM lParam) const
 {
-
+	for (size_t ii = 0; ii < m_snapLayoutWnds.layout.cells.size(); ++ii)
+	{
+		if (m_snapLayoutWnds.wnds[ii])
+			continue;
+		auto& cell = m_snapLayoutWnds.layout.cells[ii];
+		pProc(cell.rect, lParam);
+	}
 }
 
 BOOL CSnapAssistWnd::PreCreateWindow(CREATESTRUCT& cs)
@@ -180,5 +213,35 @@ BOOL CSnapAssistWnd::PreCreateWindow(CREATESTRUCT& cs)
 	return __super::PreCreateWindow(cs);
 }
 
+constexpr double AnimationDuration = 0.4;
+
+void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
+{
+	float factor = 0.f;
+	float from = m_factor;
+	bool bFinish = timeDiff >= AnimationDuration;
+	if (bFinish)
+	{
+		factor = 1.0f;
+	}
+	else
+	{
+		auto dPos = timeDiff / AnimationDuration;
+		factor = (float)CalcSmoothPosF(dPos, from, 1.0f);
+		factor = std::max(factor, 0.0f);
+		factor = std::min(factor, 1.0f);
+	}
+	m_factor = factor;
+
+	if (m_renderImp)
+	{
+		m_renderImp->OnAnimationUpdate();
+	}
+	if (bFinish)
+	{
+		m_bShowLayoutCell = true;
+		FinishAnimationCleanup();
+	}
+}
 
 }

@@ -39,15 +39,10 @@ struct SnapLayout
 	std::vector<SnapCellInfo>	cells;
 };
 
-struct SnapWindows
-{
-	std::vector<HWND>	wnds;
-};
-
 struct SnapLayoutWindows 
 {
-	SnapLayout	layout;
-	SnapWindows	windows;
+	SnapLayout			layout;
+	std::vector<HWND>	wnds;
 };
 
 struct WindowPos
