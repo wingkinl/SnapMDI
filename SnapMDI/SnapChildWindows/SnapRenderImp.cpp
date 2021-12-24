@@ -1,5 +1,4 @@
-#include "pch.h"
-#include "framework.h"
+#include SW_PCH_FNAME
 #include "SnapRenderImp.h"
 #include "LayeredAnimationWnd.h"
 

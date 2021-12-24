@@ -7,7 +7,7 @@
 #include "SnapMDI.h"
 
 #include "MainFrm.h"
-#include "SnapPreviewWnd.h"
+#include "SnapChildWindows/SnapPreviewWnd.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

@@ -13,7 +13,7 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="SnapInChild">
+    <Filter Include="SnapChildWindows">
       <UniqueIdentifier>{9da130f3-d368-465e-834a-ffff5c337938}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -45,29 +45,29 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SnapPreviewWnd.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\SnapPreviewWnd.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="SnapWindowManager.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\SnapWindowManager.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="LayeredAnimationWnd.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\LayeredAnimationWnd.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="LayeredAnimationWndRenderImp.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\LayeredAnimationWndRenderImp.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="LayeredAnimationWndRenderImpEx.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\LayeredAnimationWndRenderImpEx.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="GhostDividerWnd.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\GhostDividerWnd.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="DividePreviewWnd.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\DividePreviewWnd.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
-    <ClInclude Include="SnapRenderImp.h">
-      <Filter>SnapInChild</Filter>
+    <ClInclude Include="SnapChildWindows\SnapRenderImp.h">
+      <Filter>SnapChildWindows</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -89,26 +89,26 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SnapPreviewWnd.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\SnapPreviewWnd.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
-    <ClCompile Include="SnapWindowManager.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\SnapWindowManager.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
-    <ClCompile Include="LayeredAnimationWnd.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\LayeredAnimationWnd.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
-    <ClCompile Include="LayeredAnimationWndRenderImpEx.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\LayeredAnimationWndRenderImpEx.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
-    <ClCompile Include="GhostDividerWnd.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\GhostDividerWnd.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
-    <ClCompile Include="DividePreviewWnd.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\DividePreviewWnd.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
-    <ClCompile Include="SnapRenderImp.cpp">
-      <Filter>SnapInChild</Filter>
+    <ClCompile Include="SnapChildWindows\SnapRenderImp.cpp">
+      <Filter>SnapChildWindows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

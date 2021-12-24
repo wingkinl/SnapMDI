@@ -1,5 +1,4 @@
-#include "pch.h"
-#include "framework.h"
+#include SW_PCH_FNAME
 #include "GhostDividerWnd.h"
 #include "LayeredAnimationWndRenderImpEx.h"
 #include "SnapWindowManager.h"

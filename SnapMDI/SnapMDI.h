@@ -8,7 +8,7 @@
 #endif
 
 #include "resource.h"       // main symbols
-#include "SnapWindowManager.h"
+#include "SnapChildWindows/SnapWindowManager.h"
 
 using namespace SnapChildWindows;
 

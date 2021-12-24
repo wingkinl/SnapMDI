@@ -91,7 +91,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GDIPVER=0x0110;_WINDOWS;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GDIPVER=0x0110;SW_PCH_FNAME="pch.h";_WINDOWS;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -113,7 +113,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GDIPVER=0x0110;WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GDIPVER=0x0110;SW_PCH_FNAME="pch.h";WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -137,7 +137,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GDIPVER=0x0110;WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GDIPVER=0x0110;SW_PCH_FNAME="pch.h";WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -163,7 +163,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GDIPVER=0x0110;_WINDOWS;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GDIPVER=0x0110;SW_PCH_FNAME="pch.h";_WINDOWS;NDEBUG;%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -183,11 +183,11 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="DividePreviewWnd.h" />
-    <ClInclude Include="GhostDividerWnd.h" />
-    <ClInclude Include="LayeredAnimationWndRenderImp.h" />
-    <ClInclude Include="LayeredAnimationWndRenderImpEx.h" />
-    <ClInclude Include="LayeredAnimationWnd.h" />
+    <ClInclude Include="SnapChildWindows\DividePreviewWnd.h" />
+    <ClInclude Include="SnapChildWindows\GhostDividerWnd.h" />
+    <ClInclude Include="SnapChildWindows\LayeredAnimationWndRenderImp.h" />
+    <ClInclude Include="SnapChildWindows\LayeredAnimationWndRenderImpEx.h" />
+    <ClInclude Include="SnapChildWindows\LayeredAnimationWnd.h" />
     <ClInclude Include="ChildFrm.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
@@ -196,16 +196,16 @@
     <ClInclude Include="SnapMDI.h" />
     <ClInclude Include="SnapMDIDoc.h" />
     <ClInclude Include="SnapMDIView.h" />
-    <ClInclude Include="SnapPreviewWnd.h" />
-    <ClInclude Include="SnapRenderImp.h" />
-    <ClInclude Include="SnapWindowManager.h" />
+    <ClInclude Include="SnapChildWindows\SnapPreviewWnd.h" />
+    <ClInclude Include="SnapChildWindows\SnapRenderImp.h" />
+    <ClInclude Include="SnapChildWindows\SnapWindowManager.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DividePreviewWnd.cpp" />
-    <ClCompile Include="GhostDividerWnd.cpp" />
-    <ClCompile Include="LayeredAnimationWndRenderImpEx.cpp" />
-    <ClCompile Include="LayeredAnimationWnd.cpp" />
+    <ClCompile Include="SnapChildWindows\DividePreviewWnd.cpp" />
+    <ClCompile Include="SnapChildWindows\GhostDividerWnd.cpp" />
+    <ClCompile Include="SnapChildWindows\LayeredAnimationWndRenderImpEx.cpp" />
+    <ClCompile Include="SnapChildWindows\LayeredAnimationWnd.cpp" />
     <ClCompile Include="ChildFrm.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="pch.cpp">
@@ -217,9 +217,9 @@
     <ClCompile Include="SnapMDI.cpp" />
     <ClCompile Include="SnapMDIDoc.cpp" />
     <ClCompile Include="SnapMDIView.cpp" />
-    <ClCompile Include="SnapPreviewWnd.cpp" />
-    <ClCompile Include="SnapRenderImp.cpp" />
-    <ClCompile Include="SnapWindowManager.cpp" />
+    <ClCompile Include="SnapChildWindows\SnapPreviewWnd.cpp" />
+    <ClCompile Include="SnapChildWindows\SnapRenderImp.cpp" />
+    <ClCompile Include="SnapChildWindows\SnapWindowManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SnapMDI.rc" />
