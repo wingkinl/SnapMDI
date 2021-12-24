@@ -27,7 +27,7 @@ public:
 	void SetPreferedRenderTech(RenderTech tech) { m_tech = tech; }
 
 	inline bool IsAnimationEnabled() const { return m_bEnableAnimation; }
-	void EnableAnimation(bool val) { m_bEnableAnimation = val; }
+	virtual void EnableAnimation(bool val);
 
 	const CRect& GetOwnerRect() const { return m_rcOwner; }
 

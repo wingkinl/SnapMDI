@@ -9,6 +9,8 @@ namespace SnapChildWindows {
 class CSnapPreviewWnd;
 class CGhostDividerWnd;
 class CDividePreviewWnd;
+class CSnapAssistWnd;
+
 class CSnapWindowHelper;
 
 struct SnapWndMsg
@@ -48,6 +50,18 @@ struct SnapLayoutWindows
 	SnapWindows	windows;
 };
 
+struct WindowPos
+{
+	HWND	hWnd;
+	RECT	rect;	// in screen coordinates
+	UINT	flags;
+};
+
+struct SnapWindowGridPos
+{
+	std::vector<WindowPos>	wnds;
+};
+
 class CSnapWindowManager
 {
 public:
@@ -57,6 +71,12 @@ public:
 	void InitSnap(CWnd* pWndOwner);
 
 	virtual void OnSnapSwitch(bool bPressed);
+
+	inline bool IsAnimationEnabled() const { return m_bEnableAnimation; }
+	void EnableAnimation(bool val) { m_bEnableAnimation = val; }
+
+	inline bool IsSnapAssistEnabled() const { return m_bEnableSnapAssist; }
+	void EnableSnapAssist(bool val) { m_bEnableSnapAssist = val; }
 protected:
 	SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg);
 
@@ -93,15 +113,15 @@ protected:
 
 	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
 
-	virtual BOOL OnSnapTo();
+	virtual void OnSnapToCurGrid();
 
-	virtual void OnAfterSnap();
+	virtual void GetSnapWindowGridPosResult(SnapWindowGridPos& grids) const;
 
-	virtual void OnAfterSnapToOwner();
+	void SnapWindowsToGridResult(const SnapWindowGridPos& grids);
 
-	virtual void OnAfterSnapToChild();
+	virtual bool GetOwnerLayoutForSnapAssist(SnapLayoutWindows& layout) const;
 
-	virtual void OnAfterSnapToCustom();
+	bool ShowSnapAssist(SnapLayoutWindows&& layout);
 
 	virtual BOOL EnterDividing(const SnapWndMsg& msg);
 
@@ -181,6 +201,8 @@ private:
 	friend class CGhostDividerWnd;
 
 	void OnGhostDividerWndHidden(CGhostDividerWnd* pWnd);
+
+	CSnapAssistWnd* GetSnapAssistWnd();
 protected:
 	friend class CSnapWindowHelper;
 
@@ -198,6 +220,9 @@ protected:
 	friend class CDividePreviewWnd;
 	std::unique_ptr<CDividePreviewWnd>	m_wndDividePreview;
 
+	friend class CSnapAssistWnd;
+	std::unique_ptr<CSnapAssistWnd>	m_wndSnapAssist;
+
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
 	POINT				m_ptStart = { 0 };
@@ -208,7 +233,8 @@ protected:
 	SnapTargetType		m_snapTarget = SnapTargetType::None;
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
-	SnapLayoutWindows	m_snapLayoutWnds;
+	bool				m_bEnableAnimation = true;
+	bool				m_bEnableSnapAssist = true;
 
 	std::vector<ChildWndInfo>	m_vChildRects;
 

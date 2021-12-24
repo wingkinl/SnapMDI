@@ -106,6 +106,12 @@ public:
 		m_pWnd->UpdateLayeredWindow(NULL, 0, &size, &dc, &point, 0, &bf, ULW_ALPHA);
 
 		dc.SelectObject(pBitmapOld);
+
+		if (!m_pWnd->IsWindowVisible())
+		{
+			m_pWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
+				SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
+		}
 	}
 };
 
@@ -115,6 +121,11 @@ public:
 CSnapAssistWnd::CSnapAssistWnd(CSnapWindowManager* pManager)
 {
 	m_pManager = pManager;
+}
+
+CSnapAssistWnd::~CSnapAssistWnd()
+{
+	DestroyWindow();
 }
 
 BOOL CSnapAssistWnd::Create(CWnd* pWndOwner)
@@ -153,15 +164,20 @@ BOOL CSnapAssistWnd::Create(CWnd* pWndOwner)
 	return TRUE;
 }
 
+void CSnapAssistWnd::Show()
+{
+
+}
+
+void CSnapAssistWnd::Hide(bool bStopNow)
+{
+
+}
+
 BOOL CSnapAssistWnd::PreCreateWindow(CREATESTRUCT& cs)
 {
 	cs.dwExStyle |= WS_EX_TOOLWINDOW;
 	return __super::PreCreateWindow(cs);
-}
-
-void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
-{
-
 }
 
 

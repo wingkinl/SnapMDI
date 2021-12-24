@@ -3,6 +3,7 @@
 #include "SnapPreviewWnd.h"
 #include "GhostDividerWnd.h"
 #include "DividePreviewWnd.h"
+#include "SnapAssistWnd.h"
 #include <algorithm>
 
 #undef min
@@ -414,7 +415,6 @@ void DivideWindowsHelper::CheckStickedWindows(StickedWndDiv& div)
 		}
 		ASSERT(bFoundCurWnd);
 	}
-	ASSERT(div.wnds.size() == m_vChildRects.size());
 }
 
 bool DivideWindowsHelper::MatchDividerWindow(const StickedWndDiv& div, const DividerWndInfo& wi) const
@@ -652,6 +652,7 @@ void CSnapWindowManager::StartMoving(CSnapWindowHelper* pWndHelper)
 	auto pSnapWnd = m_wndSnapPreview.get();
 	if (pSnapWnd)
 	{
+		pSnapWnd->EnableAnimation(IsAnimationEnabled());
 		m_pCurSnapWnd = pWndHelper;
 		PreSnapInitialize();
 
@@ -669,96 +670,120 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 
 	if (!bAbort && m_curGrid.type != SnapGridType::None)
 	{
-		if (OnSnapTo())
-			OnAfterSnap();
+		OnSnapToCurGrid();
 	}
 
 	m_curGrid = { SnapGridType::None };
 	m_vChildRects.clear();
 }
 
-BOOL CSnapWindowManager::OnSnapTo()
+void CSnapWindowManager::OnSnapToCurGrid()
 {
-	CRect rectSnap = m_curGrid.rect;
-	UINT nFlags = SWP_FRAMECHANGED;
+	SnapWindowGridPos grids;
+	GetSnapWindowGridPosResult(grids);
+
+	if (0 && IsAnimationEnabled())
+	{
+	}
+	else
+	{
+		SnapWindowsToGridResult(grids);
+	}
+// 	if (IsSnapAssistEnabled())
+// 	{
+// 		if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Owner)
+// 		{
+// 			if (m_vChildRects.empty())
+// 				return;
+// 			SnapLayoutWindows layout;
+// 			if (!GetOwnerLayoutForSnapAssist(layout))
+// 				return;
+// 			ShowSnapAssist(std::move(layout));
+// 		}
+// 	}
+}
+
+void CSnapWindowManager::SnapWindowsToGridResult(const SnapWindowGridPos& grids)
+{
+	for (auto& wnd : grids.wnds)
+	{
+		CRect rect = wnd.rect;
+		m_pWndOwner->ScreenToClient(&rect);
+		::SetWindowPos(wnd.hWnd, nullptr, rect.left, rect.top, rect.Width(), rect.Height(), wnd.flags);
+	}
+}
+
+void CSnapWindowManager::GetSnapWindowGridPosResult(SnapWindowGridPos& grids) const
+{
 	CWnd* pWnd = m_pCurSnapWnd->GetWnd();
 	ASSERT(pWnd->GetParent() == m_pWndOwner);
-	m_pWndOwner->ScreenToClient(&rectSnap);
-	pWnd->SetWindowPos(nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
-	return TRUE;
-}
 
-void CSnapWindowManager::OnAfterSnap()
-{
-	switch ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask))
+	WindowPos wnd = {0};
+	wnd.hWnd = pWnd->GetSafeHwnd();
+	wnd.rect = m_curGrid.rect;
+	grids.wnds.emplace_back(wnd);
+
+	if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Child)
 	{
-	case SnapTargetType::Owner:
-		OnAfterSnapToOwner();
-		break;
-	case SnapTargetType::Child:
-		OnAfterSnapToChild();
-		break;
-	case SnapTargetType::Custom:
-		OnAfterSnapToCustom();
-		break;
-	}
-}
-
-void CSnapWindowManager::OnAfterSnapToOwner()
-{
-#if 0
-	if (m_vChildRects.empty())
-		return;
-
-	CDC* pDC = m_pWndOwner->GetDC();
-
-	CDC memDC;
-	memDC.CreateCompatibleDC(pDC);
-
-	m_pWndOwner->ReleaseDC(pDC);
-
-	for (auto& wnd : m_vChildRects)
-	{
-		LPBYTE lpBits = NULL;
-		auto& rect = (CRect&)wnd.rect;
-		HBITMAP hBmp = CDrawingManager::CreateBitmap_32(rect.Size(), (LPVOID*)&lpBits);
-		if (hBmp == NULL)
+		ASSERT(!m_vChildRects.empty());
+		wnd.hWnd = m_curGrid.childInfo.hWndChild;
+		wnd.rect = m_curGrid.childInfo.rect;
+		wnd.flags = SWP_NOZORDER | SWP_NOACTIVATE;
+		switch ((SnapGridType)((DWORD)m_curGrid.type & SnapGridSideMask))
 		{
-			return;
+		case SnapGridType::Left:
+			wnd.rect.left = m_curGrid.rect.right;
+			break;
+		case SnapGridType::Top:
+			wnd.rect.top = m_curGrid.rect.bottom;
+			break;
+		case SnapGridType::Right:
+			wnd.rect.right = m_curGrid.rect.left;
+			break;
+		case SnapGridType::Bottom:
+			wnd.rect.bottom = m_curGrid.rect.top;
+			break;
 		}
-		SendMessage(wnd.hWndChild, WM_PRINT, (WPARAM)memDC.GetSafeHdc(), (LPARAM)(PRF_CLIENT | PRF_ERASEBKGND | PRF_CHILDREN | PRF_NONCLIENT));
-		//pWndChild->PrintWindow(&memDC, 0);
+		grids.wnds.emplace_back(wnd);
 	}
-#endif
 }
 
-void CSnapWindowManager::OnAfterSnapToChild()
+bool CSnapWindowManager::GetOwnerLayoutForSnapAssist(SnapLayoutWindows& layout) const
 {
-	ASSERT(!m_vChildRects.empty());
-	CRect rectSnap = m_curGrid.childInfo.rect;
-	switch ((SnapGridType)((DWORD)m_curGrid.type & SnapGridSideMask))
+
+	return true;
+}
+
+CSnapAssistWnd* CSnapWindowManager::GetSnapAssistWnd()
+{
+	if (!m_wndSnapAssist)
 	{
-	case SnapGridType::Left:
-		rectSnap.left = m_curGrid.rect.right;
-		break;
-	case SnapGridType::Top:
-		rectSnap.top = m_curGrid.rect.bottom;
-		break;
-	case SnapGridType::Right:
-		rectSnap.right = m_curGrid.rect.left;
-		break;
-	case SnapGridType::Bottom:
-		rectSnap.bottom = m_curGrid.rect.top;
-		break;
+		m_wndSnapAssist = std::make_unique<CSnapAssistWnd>(this);
+		if (!m_wndSnapAssist->Create(m_pWndOwner))
+		{
+			m_wndSnapAssist.reset();
+			return nullptr;
+		}
 	}
-	UINT nFlags = SWP_FRAMECHANGED|SWP_NOZORDER|SWP_NOACTIVATE;
-	m_pWndOwner->ScreenToClient(&rectSnap);
-	SetWindowPos(m_curGrid.childInfo.hWndChild, nullptr, rectSnap.left, rectSnap.top, rectSnap.Width(), rectSnap.Height(), nFlags);
+	auto pWnd = m_wndSnapAssist.get();
+	if (pWnd)
+	{
+		pWnd->EnableAnimation(IsAnimationEnabled());
+	}
+	return pWnd;
 }
 
-void CSnapWindowManager::OnAfterSnapToCustom()
+bool CSnapWindowManager::ShowSnapAssist(SnapLayoutWindows&& layout)
 {
-
+	auto pWnd = GetSnapAssistWnd();
+	if (!pWnd)
+	{
+		ASSERT(0);
+		return false;
+	}
+	pWnd->m_snapLayoutWnds = std::move(layout);
+	pWnd->Show();
+	return true;
 }
 
 BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg)
@@ -783,6 +808,7 @@ BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg)
 	//	auto& wnd = m_vChildRects[ii];
 	//	SetWindowPos(wnd.hWndChild, nullptr, 0, 0, 0, 0, nFlags);
 	//}
+	m_wndDividePreview->EnableAnimation(IsAnimationEnabled());
 	m_wndDividePreview->Show();
 	return TRUE;
 }
@@ -1207,6 +1233,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 		pWnd = wndInfo.wnd.get();
 		pWnd->Create(m_pWndOwner, m_div.pos, m_div.length);
 	}
+	pWnd->EnableAnimation(IsAnimationEnabled());
 	pWnd->Show();
 }
 

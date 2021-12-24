@@ -16,6 +16,15 @@ CLayeredAnimationWnd::~CLayeredAnimationWnd()
 {
 }
 
+void CLayeredAnimationWnd::EnableAnimation(bool val)
+{
+	m_bEnableAnimation = val;
+	if (!val)
+	{
+		StopAnimation();
+	}
+}
+
 void CLayeredAnimationWnd::GetWindowInOwnerRect(CRect& rect, CWnd* pWnd) const
 {
 	if (pWnd)

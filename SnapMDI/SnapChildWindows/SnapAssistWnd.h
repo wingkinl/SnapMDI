@@ -1,10 +1,9 @@
 #pragma once
 
 #include "LayeredAnimationWnd.h"
+#include "SnapWindowManager.h"
 
 namespace SnapChildWindows {
-
-class CSnapWindowManager;
 
 using CSnapAssistWndBase = CLayeredAnimationWnd;
 
@@ -12,14 +11,20 @@ class CSnapAssistWnd final : public CSnapAssistWndBase
 {
 public:
 	CSnapAssistWnd(CSnapWindowManager* pManager);
+	~CSnapAssistWnd();
 
 	BOOL Create(CWnd* pWndOwner);
+
+	void Show();
+
+	void Hide(bool bStopNow = false);
 private:
 	BOOL PreCreateWindow(CREATESTRUCT& cs) override;
-
-	void OnAnimationTimer(double timeDiff) override;
 private:
+	friend class CSnapWindowManager;
 	CSnapWindowManager* m_pManager;
+
+	SnapLayoutWindows	m_snapLayoutWnds;
 };
 
 }
