@@ -46,6 +46,8 @@ protected:
 
 	static LONG CalcSmoothPos(double pos, LONG from, LONG to);
 
+	static double CalcSmoothPosF(double pos, double from, double to);
+
 	static CRect AnimateRect(double pos, const RECT& from, const RECT& to);
 	// Attributes
 protected:

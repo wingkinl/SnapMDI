@@ -95,14 +95,25 @@ inline static double SmoothMoveELX(double x)
 	return (cos((1 - x) * dPI) + 1) / 2;
 }
 
-LONG CLayeredAnimationWnd::CalcSmoothPos(double pos, LONG from, LONG to)
+template <typename Ty>
+static Ty _CalcSmoothPos(double pos, Ty from, Ty to)
 {
 	if (from == to || pos > 1.)
 		return to;
 	auto newPos = from * (1 - SmoothMoveELX(pos))
 		+ to * SmoothMoveELX(pos);
 	//auto newPos = from + (to - from) * pos;
-	return (LONG)newPos;
+	return (Ty)newPos;
+}
+
+LONG CLayeredAnimationWnd::CalcSmoothPos(double pos, LONG from, LONG to)
+{
+	return (LONG)_CalcSmoothPos(pos, from, to);
+}
+
+double CLayeredAnimationWnd::CalcSmoothPosF(double pos, double from, double to)
+{
+	return _CalcSmoothPos(pos, from, to);
 }
 
 CRect CLayeredAnimationWnd::AnimateRect(double pos, const RECT& from, const RECT& to)

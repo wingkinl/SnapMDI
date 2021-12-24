@@ -3,6 +3,12 @@
 #include "SnapRenderImp.h"
 #include "LayeredAnimationWnd.h"
 
+static inline void GetDefaultVisualSettings(SnapVisualSettings& settings)
+{
+	settings.fill = { 0.26f, 0.56f, 0.87f, 0.58f };
+	settings.edge = { 0.8f, 0.8f, 0.8f, 0.78f };
+}
+
 void CSnapRenderImpBaseDirectComposition::CreateDeviceResourcesEx(ID2D1DeviceContext* pDC)
 {
 	D2D_COLOR_F const color = { 0.26f, 0.56f, 0.87f, 0.5f };
@@ -33,17 +39,25 @@ void CSnapRenderImpBaseDirectComposition::PaintSnapRect(ID2D1DeviceContext* pDC,
 	rRect.radiusX = 10;
 	rRect.radiusY = 10;
 
-	m_brush->SetColor({ 0.8f, 0.8f, 0.8f, 0.78f });
+	SnapVisualSettings settings;
+	GetVisualSettings(settings);
+
+	m_brush->SetColor(settings.edge);
 	//pDC->FillRectangle(rect, m_brush.Get());
 	pDC->FillRoundedRectangle(rRect, m_brush.Get());
 
-	m_brush->SetColor({ 0.26f, 0.56f, 0.87f, 0.58f });
+	m_brush->SetColor(settings.fill);
 
 	rRect.rect.left += gap;
 	rRect.rect.top += gap;
 	rRect.rect.right -= gap;
 	rRect.rect.bottom -= gap;
 	pDC->FillRoundedRectangle(rRect, m_brush.Get());
+}
+
+void CSnapRenderImpBaseDirectComposition::GetVisualSettings(SnapVisualSettings& settings) const
+{
+	GetDefaultVisualSettings(settings);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -54,8 +68,15 @@ void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect)
 {
 	COLORREF crfFill = RGB(66, 143, 222);
 
-	Gdiplus::Color color(150, GetRValue(crfFill), GetGValue(crfFill), GetBValue(crfFill));
-	Gdiplus::SolidBrush brush(Gdiplus::Color(200, 0xcc, 0xcc, 0xcc));
+	SnapVisualSettings settings;
+	GetVisualSettings(settings);
+
+	Gdiplus::Color colorEdge((BYTE)(settings.edge.a * 255), 
+		(BYTE)(settings.edge.r * 255), 
+		(BYTE)(settings.edge.g * 255), 
+		(BYTE)(settings.edge.b * 255));
+
+	Gdiplus::SolidBrush brush(colorEdge);
 
 	Gdiplus::GraphicsPath path;
 	int diameter = GetSystemMetrics(SM_CXVSCROLL);
@@ -65,9 +86,18 @@ void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect)
 
 	path.Reset();
 
-	brush.SetColor(color);
+	Gdiplus::Color colorFill((BYTE)(settings.fill.a * 255),
+		(BYTE)(settings.fill.r * 255),
+		(BYTE)(settings.fill.g * 255),
+		(BYTE)(settings.fill.b * 255));
+	brush.SetColor(colorFill);
 	rect.DeflateRect(diameter / 2, diameter / 2);
 	UpdateRoundedRectPath(path, rect, diameter);
 	gg.FillPath(&brush, &path);
 
+}
+
+void CSnapRenderImpBaseAlpha::GetVisualSettings(SnapVisualSettings& settings) const
+{
+	GetDefaultVisualSettings(settings);
 }

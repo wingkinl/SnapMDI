@@ -58,7 +58,14 @@ public:
 		}
 		return TRUE;
 	}
-private:
+
+	void GetVisualSettings(SnapVisualSettings& settings) const override
+	{
+		__super::GetVisualSettings(settings);
+		auto pPreviweWnd = (CDividePreviewWnd*)m_pWnd;
+		settings.edge.a *= pPreviweWnd->GetAlphaFactor();
+		settings.fill.a *= pPreviweWnd->GetAlphaFactor();
+	}
 };
 
 class CDividePreviewRenderImpAlpha : public CSnapRenderImpBaseAlpha
@@ -121,6 +128,14 @@ public:
 	BOOL HandlePaint() override
 	{
 		return FALSE;
+	}
+
+	void GetVisualSettings(SnapVisualSettings& settings) const override
+	{
+		__super::GetVisualSettings(settings);
+		auto pPreviweWnd = (CDividePreviewWnd*)m_pWnd;
+		settings.edge.a *= pPreviweWnd->GetAlphaFactor();
+		settings.fill.a *= pPreviweWnd->GetAlphaFactor();
 	}
 };
 
@@ -245,11 +260,11 @@ constexpr double AnimationDuration = 0.4;
 
 void CDividePreviewWnd::OnAnimationTimer(double timeDiff)
 {
-	LONG alpha = 0;
-	LONG alphaFrom = m_byAlpha, alphaTo = 255;
+	float alpha = 0.f;
+	float alphaFrom = m_alpha, alphaTo = 1.0f;
 	if (m_aniStage == AnimateStage::Hiding)
 	{
-		alphaTo = 0;
+		alphaTo = 0.0f;
 	}
 	bool bFinish = timeDiff >= AnimationDuration;
 	if (bFinish)
@@ -259,17 +274,16 @@ void CDividePreviewWnd::OnAnimationTimer(double timeDiff)
 	else
 	{
 		auto dPos = timeDiff / AnimationDuration;
-		alpha = CalcSmoothPos(dPos, alphaFrom, alphaTo);
-		alpha = std::max(alpha, 0L);
-		alpha = std::min(alpha, 255L);
+		alpha = (float)CalcSmoothPosF(dPos, alphaFrom, alphaTo);
+		alpha = std::max(alpha, 0.0f);
+		alpha = std::min(alpha, 1.0f);
 	}
-	m_byAlpha = (BYTE)alpha;
+	m_alpha = alpha;
 
 	if (m_renderImp)
 	{
 		m_renderImp->OnAnimationUpdate();
 	}
-	SetLayeredWindowAttributes(0, m_byAlpha, LWA_ALPHA);
 	if (bFinish)
 	{
 		FinishAnimationCleanup();
