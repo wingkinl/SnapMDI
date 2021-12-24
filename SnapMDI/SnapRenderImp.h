@@ -2,6 +2,8 @@
 
 #include "LayeredAnimationWndRenderImpEx.h"
 
+namespace SnapChildWindows {
+
 struct SnapVisualSettings 
 {
 	D2D1_COLOR_F	fill;
@@ -29,3 +31,6 @@ public:
 protected:
 	virtual void GetVisualSettings(SnapVisualSettings& settings) const;
 };
+
+
+}

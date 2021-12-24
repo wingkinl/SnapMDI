@@ -9,6 +9,9 @@
 #undef min
 #undef max
 
+namespace SnapChildWindows
+{
+
 static int s_nHotRgnSize = -1;
 
 #define SnapTargetTypeUnknown (CSnapWindowManager::SnapTargetType)0xff
@@ -1260,3 +1263,4 @@ void CSnapWindowHelper::InitSnap(CSnapWindowManager* pManager, CWnd* pWnd)
 	m_pWnd = pWnd;
 }
 
+}

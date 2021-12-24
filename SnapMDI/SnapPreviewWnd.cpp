@@ -4,6 +4,8 @@
 #include "LayeredAnimationWndRenderImpEx.h"
 #include "SnapRenderImp.h"
 
+namespace SnapChildWindows {
+
 class CSnapPreviewRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
 {
 public:
@@ -271,3 +273,5 @@ void CSnapPreviewWnd::OnAnimationTimer(double timeDiff)
 	OnAnimationTo(rect, bFinish);
 }
 
+
+}

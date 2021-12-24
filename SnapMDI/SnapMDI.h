@@ -10,6 +10,7 @@
 #include "resource.h"       // main symbols
 #include "SnapWindowManager.h"
 
+using namespace SnapChildWindows;
 
 // CSnapMDIApp:
 // See SnapMDI.cpp for the implementation of this class

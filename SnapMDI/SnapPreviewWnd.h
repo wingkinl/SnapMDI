@@ -2,6 +2,8 @@
 
 #include "LayeredAnimationWnd.h"
 
+namespace SnapChildWindows {
+
 using CSnapPreviewWndBase = CLayeredAnimationWnd;
 
 class CSnapPreviewWnd : public CSnapPreviewWndBase
@@ -29,3 +31,5 @@ private:
 	CRect	m_rectFrom;
 	CRect	m_rectTo;
 };
+
+}

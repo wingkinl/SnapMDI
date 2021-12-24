@@ -8,6 +8,8 @@
 #undef min
 #undef max
 
+namespace SnapChildWindows {
+
 class CDividePreviewRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
 {
 public:
@@ -295,4 +297,6 @@ void CDividePreviewWnd::OnAnimationTimer(double timeDiff)
 	{
 		FinishAnimationCleanup();
 	}
+}
+
 }

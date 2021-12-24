@@ -2,6 +2,8 @@
 
 #include "LayeredAnimationWnd.h"
 
+namespace SnapChildWindows {
+
 class CSnapWindowManager;
 
 using CDividePreviewWndBase = CLayeredAnimationWnd;
@@ -32,3 +34,4 @@ private:
 	float	m_alpha = 0.f;
 };
 
+}

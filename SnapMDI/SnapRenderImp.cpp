@@ -3,6 +3,8 @@
 #include "SnapRenderImp.h"
 #include "LayeredAnimationWnd.h"
 
+namespace SnapChildWindows {
+
 static inline void GetDefaultVisualSettings(SnapVisualSettings& settings)
 {
 	settings.fill = { 0.26f, 0.56f, 0.87f, 0.58f };
@@ -100,4 +102,6 @@ void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect)
 void CSnapRenderImpBaseAlpha::GetVisualSettings(SnapVisualSettings& settings) const
 {
 	GetDefaultVisualSettings(settings);
+}
+
 }

@@ -8,6 +8,8 @@
 #undef min
 #undef max
 
+namespace SnapChildWindows {
+
 class CGhostDividerRenderImpAlpha : public CLayeredAnimationWndRenderImpAlpha
 {
 public:
@@ -172,4 +174,6 @@ void CGhostDividerWnd::OnShowWindow(BOOL bShow, UINT nStatus)
 	{
 		m_pManager->OnGhostDividerWndHidden(this);
 	}
+}
+
 }

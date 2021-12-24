@@ -1,5 +1,7 @@
 #pragma once
 
+namespace SnapChildWindows {
+
 class CLayeredAnimationWnd;
 
 class CLayeredAnimationWndRenderImp
@@ -33,3 +35,5 @@ public:
 protected:
 	CLayeredAnimationWnd* m_pWnd = nullptr;
 };
+
+}

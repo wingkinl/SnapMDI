@@ -2,6 +2,8 @@
 
 #include "LayeredAnimationWnd.h"
 
+namespace SnapChildWindows {
+
 class CSnapWindowManager;
 
 using CGhostDividerWndBase = CLayeredAnimationWnd;
@@ -33,3 +35,4 @@ private:
 	BYTE	m_byAlpha = 0;
 };
 
+}

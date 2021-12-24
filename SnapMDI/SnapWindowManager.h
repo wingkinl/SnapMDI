@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 
+namespace SnapChildWindows {
+
 class CSnapPreviewWnd;
 class CGhostDividerWnd;
 class CDividePreviewWnd;
@@ -23,6 +25,27 @@ struct SnapWndMsg
 		Handled,
 		NeedPostWndMsg,
 	};
+};
+
+struct SnapCellInfo 
+{
+	RECT	rect;
+};
+
+struct SnapLayout 
+{
+	std::vector<SnapCellInfo>	cells;
+};
+
+struct SnapWindows
+{
+	std::vector<HWND>	wnds;
+};
+
+struct SnapLayoutWindows 
+{
+	SnapLayout	layout;
+	SnapWindows	windows;
 };
 
 class CSnapWindowManager
@@ -185,6 +208,8 @@ protected:
 	SnapTargetType		m_snapTarget = SnapTargetType::None;
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
+	SnapLayoutWindows	m_snapLayoutWnds;
+
 	std::vector<ChildWndInfo>	m_vChildRects;
 
 	std::vector<ChildWndInfo>	m_vDivideChildRects;
@@ -255,3 +280,5 @@ protected:
 	CSnapWindowManager* m_pManager = nullptr;
 	CWnd* m_pWnd = nullptr;
 };
+
+}

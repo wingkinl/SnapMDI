@@ -3,6 +3,8 @@
 #include "LayeredAnimationWndRenderImpEx.h"
 #include "LayeredAnimationWnd.h"
 
+namespace SnapChildWindows {
+
 BOOL CLayeredAnimationWndRenderImp::Create(CWnd* pWndOwner, LPCRECT pRect)
 {
 	CRect rect;
@@ -383,4 +385,7 @@ void CLayeredAnimationWndRenderImpDirectComposition::HandleDPIChanged(WPARAM wPa
 		rect.right - rect.left,
 		rect.bottom - rect.top,
 		SWP_NOACTIVATE));
+}
+
+
 }

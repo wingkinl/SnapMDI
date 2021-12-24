@@ -5,6 +5,8 @@
 
 #include "LayeredAnimationWndRenderImp.h"
 
+namespace SnapChildWindows {
+
 class CLayeredAnimationWnd : public CWnd
 {
 public:
@@ -83,3 +85,5 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 };
+
+}

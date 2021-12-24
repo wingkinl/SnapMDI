@@ -6,6 +6,8 @@
 #undef min
 #undef max
 
+namespace SnapChildWindows {
+
 CLayeredAnimationWnd::CLayeredAnimationWnd()
 {
 	
@@ -141,4 +143,6 @@ void CLayeredAnimationWnd::OnDestroy()
 {
 	StopAnimation();
 	__super::OnDestroy();
+}
+
 }

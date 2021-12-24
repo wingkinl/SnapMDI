@@ -13,6 +13,8 @@ using namespace Gdiplus;
 #include <ShellScalingApi.h>
 #include <d2d1_1.h>
 
+namespace SnapChildWindows {
+
 using namespace Microsoft::WRL;
 using namespace D2D1;
 
@@ -122,3 +124,5 @@ protected:
 	ComPtr<IDCompositionVisual2> m_visual;
 	ComPtr<IDCompositionSurface> m_surface;
 };
+
+}
