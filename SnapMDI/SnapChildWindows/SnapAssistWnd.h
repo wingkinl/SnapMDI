@@ -7,7 +7,25 @@ namespace SnapChildWindows {
 
 using CSnapAssistWndBase = CLayeredAnimationWnd;
 
-typedef void (*EnumLayoutCellWindowsProc)(RECT rect, LPARAM lParam);
+typedef void (*EnumLayoutCellProc)(RECT rect, LPARAM lParam);
+
+struct SnapGridWndAniInfo
+{
+	RECT	rectOld;
+	HBITMAP hBmpWnd = nullptr;
+
+	~SnapGridWndAniInfo()
+	{
+		if (hBmpWnd)
+			DeleteObject(hBmpWnd);
+	}
+};
+
+struct SnapGridWndAniData
+{
+	SnapWindowGridPos				wndPos;
+	std::vector<SnapGridWndAniInfo>	snapGridWndAni;
+};
 
 class CSnapAssistWnd final : public CSnapAssistWndBase
 {
@@ -19,18 +37,22 @@ public:
 
 	void Show();
 
-	void EnumLayoutCellWindows(EnumLayoutCellWindowsProc pProc, LPARAM lParam) const;
+	void EnumLayoutCells(EnumLayoutCellProc pProc, LPARAM lParam) const;
+
+	const SnapGridWndAniData& GetSnapGridWndAniData() const { return m_snapGridWndAni; }
 
 	inline float GetTransitionFactor() const { return m_factor; }
 private:
 	BOOL PreCreateWindow(CREATESTRUCT& cs) override;
 
 	void OnAnimationTimer(double timeDiff) override;
+
+	void PrepareMoreInfoForAnimation();
 private:
 	friend class CSnapWindowManager;
 	CSnapWindowManager* m_pManager;
 
-	SnapWindowGridPos	m_snapGridsAni;
+	SnapGridWndAniData	m_snapGridWndAni;
 
 	SnapLayoutWindows	m_snapLayoutWnds;
 

@@ -39,13 +39,13 @@ public:
 				};
 
 				auto pWnd = (CSnapAssistWnd*)m_pWnd;
-				auto locPaintRect = [](RECT rect, LPARAM lParam) {
+				auto locPaintCell = [](RECT rect, LPARAM lParam) {
 					auto params = *(PaintParams*)lParam;
 					params.pThis->m_pWnd->ScreenToClient(&rect);
 					params.pThis->PaintSnapRect(params.pDC, rect);
 				};
 				PaintParams params = { this, dc.Get() };
-				pWnd->EnumLayoutCellWindows(locPaintRect, (LPARAM)&params);
+				pWnd->EnumLayoutCells(locPaintCell, (LPARAM)&params);
 			}
 
 			HR(m_surface->EndDraw());
@@ -89,15 +89,18 @@ public:
 				CSnapAssistRenderImpAlpha* pThis;
 				Gdiplus::Graphics* pGraphics;
 			};
+			PaintParams params = { this, &gg };
 
 			auto pWnd = (CSnapAssistWnd*)m_pWnd;
-			auto locPaintRect = [](RECT rect, LPARAM lParam) {
+
+			auto locPaintCell = [](RECT rect, LPARAM lParam) {
 				auto params = *(PaintParams*)lParam;
 				params.pThis->m_pWnd->ScreenToClient(&rect);
 				params.pThis->PaintSnapRect(*params.pGraphics, rect);
 			};
-			PaintParams params = {this, &gg};
-			pWnd->EnumLayoutCellWindows(locPaintRect, (LPARAM)&params);
+			//pWnd->EnumLayoutCells(locPaintCell, (LPARAM)&params);
+
+			PaintSnapGridWnds(gg);
 		}
 
 		BLENDFUNCTION bf;
@@ -115,6 +118,34 @@ public:
 			m_pWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
 				SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
 		}
+	}
+
+	void PaintSnapGridWnds(Gdiplus::Graphics& gg)
+	{
+		auto pWnd = (CSnapAssistWnd*)m_pWnd;
+		auto& data = pWnd->GetSnapGridWndAniData();
+		auto factor = pWnd->GetTransitionFactor();
+		ASSERT(data.snapGridWndAni.size() == data.wndPos.wnds.size());
+		for (size_t ii = 0; ii < data.snapGridWndAni.size(); ++ii)
+		{
+			auto& info = data.snapGridWndAni[ii];
+			auto& wnd = data.wndPos.wnds[ii];
+			PaintSnapGridWnd(gg, info, wnd, factor);
+		}
+	}
+
+	void PaintSnapGridWnd(Gdiplus::Graphics& gg, const SnapGridWndAniInfo& info, const WindowPos& wnd, float factor)
+	{
+		auto pWnd = (CSnapAssistWnd*)m_pWnd;
+		CRect rect;
+		rect.left = (LONG)(info.rectOld.left + (wnd.rect.left - info.rectOld.left) * factor);
+		rect.top = (LONG)(info.rectOld.top + (wnd.rect.top - info.rectOld.top) * factor);
+		rect.right = (LONG)(info.rectOld.right + (wnd.rect.right - info.rectOld.right) * factor);
+		rect.bottom = (LONG)(info.rectOld.bottom + (wnd.rect.bottom - info.rectOld.bottom) * factor);
+		pWnd->ScreenToClient(&rect);
+		//PaintSnapRect(gg, rect);
+		Gdiplus::Bitmap bmp(info.hBmpWnd, nullptr);
+		gg.DrawImage(&bmp, rect.left, rect.top, rect.Width(), rect.Height());
 	}
 };
 
@@ -183,21 +214,56 @@ void CSnapAssistWnd::Show()
 	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER;
 	SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0, nFlags);
 
-	if (!m_snapGridsAni.wnds.empty() && ShouldDoAnimation())
+	if (!m_snapGridWndAni.wndPos.wnds.empty() && ShouldDoAnimation())
 	{
 		m_aniStage = AnimateStage::Showing;
 		m_bShowLayoutCell = false;
+		PrepareMoreInfoForAnimation();
+		m_factor = 0.0f;
 		ScheduleAnimation();
 	}
 	else
 	{
 		m_bShowLayoutCell = true;
+		m_factor = 1.0f;
 		m_renderImp->OnAnimationUpdate();
 	}
 }
 
-void CSnapAssistWnd::EnumLayoutCellWindows(EnumLayoutCellWindowsProc pProc, LPARAM lParam) const
+void CSnapAssistWnd::PrepareMoreInfoForAnimation()
 {
+	auto count = m_snapGridWndAni.wndPos.wnds.size();
+	m_snapGridWndAni.snapGridWndAni.resize(count);
+
+	CClientDC clientDC(this);
+	CDC dc;
+	dc.CreateCompatibleDC(&clientDC);
+
+	for (size_t ii = 0; ii < count; ++ii)
+	{
+		auto& wnd = m_snapGridWndAni.wndPos.wnds[ii];
+		auto& mi = m_snapGridWndAni.snapGridWndAni[ii];
+		::GetWindowRect(wnd.hWnd, &mi.rectOld);
+		
+		auto& rcOld = (CRect&)mi.rectOld;
+		CBitmap bmpWnd;
+		bmpWnd.CreateCompatibleBitmap(&clientDC, rcOld.Width(), rcOld.Height());
+
+		CBitmap* pBitmapOld = (CBitmap*)dc.SelectObject(&bmpWnd);
+
+		::SendMessage(wnd.hWnd, WM_PRINT, (WPARAM)dc.GetSafeHdc(), 
+			(LPARAM)(PRF_CLIENT | PRF_ERASEBKGND | PRF_CHILDREN | PRF_NONCLIENT));
+
+		dc.SelectObject(pBitmapOld);
+
+		mi.hBmpWnd = (HBITMAP)bmpWnd.Detach();
+	}
+}
+
+void CSnapAssistWnd::EnumLayoutCells(EnumLayoutCellProc pProc, LPARAM lParam) const
+{
+	if (!m_bShowLayoutCell)
+		return;
 	for (size_t ii = 0; ii < m_snapLayoutWnds.layout.cells.size(); ++ii)
 	{
 		if (m_snapLayoutWnds.wnds[ii])
@@ -223,6 +289,7 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 	if (bFinish)
 	{
 		factor = 1.0f;
+		m_bShowLayoutCell = true;
 	}
 	else
 	{
@@ -239,7 +306,7 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 	}
 	if (bFinish)
 	{
-		m_bShowLayoutCell = true;
+		//m_snapGridWndAni.snapGridWndAni.clear();
 		FinishAnimationCleanup();
 	}
 }

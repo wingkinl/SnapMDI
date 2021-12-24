@@ -689,7 +689,7 @@ void CSnapWindowManager::OnSnapToCurGrid()
 		if (pWnd)
 		{
 			bSnapNow = false;
-			std::swap(pWnd->m_snapGridsAni, grids);
+			std::swap(pWnd->m_snapGridWndAni.wndPos, grids);
 		}
 	}
 #endif // _DEBUG
