@@ -1,6 +1,5 @@
 #include SW_PCH_FNAME
 #include "DividePreviewWnd.h"
-#include "LayeredAnimationWndRenderImpEx.h"
 #include "SnapRenderImp.h"
 #include "SnapWindowManager.h"
 
@@ -124,11 +123,6 @@ public:
 			m_pWnd->SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0,
 				SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW | SWP_NOSIZE | SWP_NOZORDER | SWP_NOMOVE);
 		}
-	}
-
-	BOOL HandlePaint() override
-	{
-		return FALSE;
 	}
 
 	void GetVisualSettings(SnapVisualSettings& settings) const override

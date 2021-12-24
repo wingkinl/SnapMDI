@@ -193,6 +193,7 @@
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SnapChildWindows\SnapAssistWnd.h" />
     <ClInclude Include="SnapMDI.h" />
     <ClInclude Include="SnapMDIDoc.h" />
     <ClInclude Include="SnapMDIView.h" />
@@ -214,6 +215,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="SnapChildWindows\SnapAssistWnd.cpp" />
     <ClCompile Include="SnapMDI.cpp" />
     <ClCompile Include="SnapMDIDoc.cpp" />
     <ClCompile Include="SnapMDIView.cpp" />
