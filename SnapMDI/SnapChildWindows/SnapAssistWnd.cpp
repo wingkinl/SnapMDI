@@ -98,7 +98,7 @@ public:
 				params.pThis->m_pWnd->ScreenToClient(&rect);
 				params.pThis->PaintSnapRect(*params.pGraphics, rect);
 			};
-			//pWnd->EnumLayoutCells(locPaintCell, (LPARAM)&params);
+			pWnd->EnumLayoutCells(locPaintCell, (LPARAM)&params);
 
 			PaintSnapGridWnds(gg);
 		}

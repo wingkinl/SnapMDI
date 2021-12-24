@@ -67,8 +67,6 @@ void CSnapRenderImpBaseDirectComposition::GetVisualSettings(SnapVisualSettings& 
 
 void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect)
 {
-	COLORREF crfFill = RGB(66, 143, 222);
-
 	SnapVisualSettings settings;
 	GetVisualSettings(settings);
 

@@ -312,9 +312,9 @@ void CLayeredAnimationWndRenderImpDirectComposition::CreateDeviceResources()
 	}
 	else
 	{
-		CClientDC dc(nullptr);
-		x = dc.GetDeviceCaps(LOGPIXELSX);
-		y = dc.GetDeviceCaps(LOGPIXELSY);
+		CClientDC dcTemp(nullptr);
+		x = dcTemp.GetDeviceCaps(LOGPIXELSX);
+		y = dcTemp.GetDeviceCaps(LOGPIXELSY);
 	}
 	m_dpi.x = static_cast<float>(x);
 	m_dpi.y = static_cast<float>(y);
