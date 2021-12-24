@@ -186,13 +186,16 @@ BOOL CDividePreviewWnd::Create(CWnd* pWndOwner)
 
 void CDividePreviewWnd::Show()
 {
+	if (!m_renderImp)
+	{
+		ASSERT(0);
+		return;
+	}
 	ASSERT(m_pWndOwner);
 	m_pWndOwner->GetClientRect(&m_rcOwner);
 	m_pWndOwner->ClientToScreen(&m_rcOwner);
-	if (m_renderImp)
-	{
-		m_renderImp->StartRendering();
-	}
+
+	m_renderImp->StartRendering();
 
 	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER;
 	SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0, nFlags);
@@ -204,16 +207,20 @@ void CDividePreviewWnd::Show()
 	}
 	else
 	{
-		if (m_renderImp)
-		{
-			m_renderImp->OnAnimationUpdate();
-		}
-		SetLayeredWindowAttributes(0, 255, LWA_ALPHA);
+		m_alpha = 1.0f;
+		m_renderImp->OnAnimationUpdate();
 	}
 }
 
-void CDividePreviewWnd::Hide()
+void CDividePreviewWnd::Hide(bool bStopNow)
 {
+	if (bStopNow)
+	{
+		m_renderImp->StopRendering();
+		m_aniStage = AnimateStage::Hiding;
+		FinishAnimationCleanup();
+		return;
+	}
 	if (!IsWindowVisible())
 	{
 		if (!m_nTimerIDAni)
@@ -242,10 +249,10 @@ void CDividePreviewWnd::UpdateDivideWindows()
 
 void CDividePreviewWnd::EnumDivideWindows(EnumDivideWindowsProc pProc, LPARAM lParam) const
 {
-	auto& vChildRects = m_pManager->m_vChildRects;
+	auto& vChildRects = m_pManager->m_vDivideChildRects;
 	for (int ii = 0; ii < (int)vChildRects.size(); ++ii)
 	{
-		if (ii != m_pManager->m_nCurSnapWndIdx)
+		if (ii != m_pManager->m_nActiveDivideWndIdx)
 			pProc(vChildRects[ii].rect, lParam);
 	}
 }

@@ -16,7 +16,7 @@ public:
 	BOOL Create(CWnd* pWndOwner);
 
 	void Show();
-	void Hide();
+	void Hide(bool bStopNow = false);
 
 	void UpdateDivideWindows();
 

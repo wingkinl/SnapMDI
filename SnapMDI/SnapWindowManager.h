@@ -186,11 +186,13 @@ protected:
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
 	std::vector<ChildWndInfo>	m_vChildRects;
-	int							m_nCurSnapWndIdx = -1;	// index to m_vChildRects
+
+	std::vector<ChildWndInfo>	m_vDivideChildRects;
+	int							m_nActiveDivideWndIdx = -1;	// index to m_vDivideChildRects
 
 	struct WndEdge
 	{
-		size_t	rectIdx;	// points to m_vChildRects
+		size_t	rectIdx;	// points to m_vDivideChildRects
 		bool	bFirst;		// first edge or the second
 	};
 
