@@ -23,6 +23,7 @@
 IMPLEMENT_DYNCREATE(CSnapMDIView, CView)
 
 BEGIN_MESSAGE_MAP(CSnapMDIView, CView)
+	ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
 // CSnapMDIView construction/destruction
@@ -59,6 +60,10 @@ void CSnapMDIView::OnDraw(CDC* pDC)
 	pDC->FillSolidRect(rect, m_crfBackground);
 }
 
+BOOL CSnapMDIView::OnEraseBkgnd(CDC*)
+{
+	return TRUE;
+}
 
 // CSnapMDIView diagnostics
 

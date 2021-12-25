@@ -143,6 +143,10 @@ CDividePreviewWnd::CDividePreviewWnd(CSnapWindowManager* pManager)
 	m_pManager = pManager;
 }
 
+BEGIN_MESSAGE_MAP(CDividePreviewWnd, CDividePreviewWndBase)
+	ON_WM_MOUSEACTIVATE()
+END_MESSAGE_MAP()
+
 BOOL CDividePreviewWnd::Create(CWnd* pWndOwner)
 {
 	ASSERT_VALID(pWndOwner);
@@ -256,6 +260,11 @@ BOOL CDividePreviewWnd::PreCreateWindow(CREATESTRUCT& cs)
 {
 	cs.dwExStyle |= WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
 	return __super::PreCreateWindow(cs);
+}
+
+int CDividePreviewWnd::OnMouseActivate(CWnd* /*pDesktopWnd*/, UINT /*nHitTest*/, UINT /*message*/)
+{
+	return MA_NOACTIVATE;
 }
 
 constexpr double AnimationDuration = 0.4;

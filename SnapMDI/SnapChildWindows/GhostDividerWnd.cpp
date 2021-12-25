@@ -71,6 +71,7 @@ CGhostDividerWnd::~CGhostDividerWnd()
 
 BEGIN_MESSAGE_MAP(CGhostDividerWnd, CGhostDividerWndBase)
 	ON_WM_SHOWWINDOW()
+	ON_WM_MOUSEACTIVATE()
 END_MESSAGE_MAP()
 
 void CGhostDividerWnd::Create(CWnd* pWndOwner, const POINT& pos, LONG length)
@@ -173,6 +174,11 @@ void CGhostDividerWnd::OnShowWindow(BOOL bShow, UINT nStatus)
 	{
 		m_pManager->OnGhostDividerWndHidden(this);
 	}
+}
+
+int CGhostDividerWnd::OnMouseActivate(CWnd* /*pDesktopWnd*/, UINT /*nHitTest*/, UINT /*message*/)
+{
+	return MA_NOACTIVATE;
 }
 
 }

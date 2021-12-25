@@ -57,7 +57,12 @@ struct SnapWindowGridPos
 	std::vector<WindowPos>	wnds;
 };
 
-class CSnapWindowManager
+#ifndef SNAP_WINDOW_EXT_CLASS
+	#define SNAP_WINDOW_EXT_CLASS
+#endif // !SNAP_WINDOW_EXT_CLASS
+
+
+class SNAP_WINDOW_EXT_CLASS CSnapWindowManager
 {
 public:
 	CSnapWindowManager();
@@ -110,6 +115,8 @@ protected:
 
 	virtual void OnSnapToCurGrid();
 
+	virtual bool ShouldDoAnimationToSnapCurGrid() const;
+
 	virtual void GetSnapWindowGridPosResult(SnapWindowGridPos& grids) const;
 
 	void SnapWindowsToGridResult(const SnapWindowGridPos& grids);
@@ -117,6 +124,14 @@ protected:
 	virtual bool GetOwnerLayoutForSnapAssist(SnapLayoutWindows& layout) const;
 
 	bool ShowSnapAssist(SnapLayoutWindows&& layout);
+
+	enum class SnapAssistEvent
+	{
+		Quit,
+		FinishAnimation,
+	};
+
+	void OnSnapAssistEvent(SnapAssistEvent event);
 
 	virtual BOOL EnterDividing(const SnapWndMsg& msg);
 
@@ -271,7 +286,7 @@ protected:
 };
 
 
-class CSnapWindowHelper
+class SNAP_WINDOW_EXT_CLASS CSnapWindowHelper
 {
 public:
 	CSnapWindowHelper();

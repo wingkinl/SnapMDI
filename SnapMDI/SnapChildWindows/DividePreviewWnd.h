@@ -29,6 +29,10 @@ private:
 	BOOL PreCreateWindow(CREATESTRUCT& cs) override;
 
 	void OnAnimationTimer(double timeDiff) override;
+
+	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
+	
+	DECLARE_MESSAGE_MAP()
 private:
 	CSnapWindowManager* m_pManager;
 	float	m_factor = 0.f;

@@ -682,8 +682,8 @@ void CSnapWindowManager::OnSnapToCurGrid()
 	SnapWindowGridPos grids;
 	GetSnapWindowGridPosResult(grids);
 	bool bSnapNow = true;
-#if 0
-	if (IsAnimationEnabled())
+#if 1
+	if (IsAnimationEnabled() && ShouldDoAnimationToSnapCurGrid())
 	{
 		auto pWnd = GetSnapAssistWnd();
 		if (pWnd)
@@ -692,25 +692,29 @@ void CSnapWindowManager::OnSnapToCurGrid()
 			std::swap(pWnd->m_snapGridWndAni.wndPos, grids);
 		}
 	}
-#endif // _DEBUG
+#endif
 	if (bSnapNow)
 	{
 		SnapWindowsToGridResult(grids);
 	}
-#if 0
+#if 1
+	SnapLayoutWindows layout;
 	if (IsSnapAssistEnabled())
 	{
 		if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Owner)
 		{
-			if (m_vChildRects.empty())
-				return;
-			SnapLayoutWindows layout;
-			if (!GetOwnerLayoutForSnapAssist(layout))
-				return;
-			ShowSnapAssist(std::move(layout));
+			if (!m_vChildRects.empty())
+				GetOwnerLayoutForSnapAssist(layout);
 		}
 	}
-#endif // _DEBUG
+	if (!bSnapNow || !layout.wnds.empty())
+		ShowSnapAssist(std::move(layout));
+#endif
+}
+
+bool CSnapWindowManager::ShouldDoAnimationToSnapCurGrid() const
+{
+	return true;
 }
 
 void CSnapWindowManager::SnapWindowsToGridResult(const SnapWindowGridPos& grids)
@@ -887,6 +891,26 @@ bool CSnapWindowManager::ShowSnapAssist(SnapLayoutWindows&& layout)
 	pWnd->m_snapLayoutWnds = std::move(layout);
 	pWnd->Show();
 	return true;
+}
+
+void CSnapWindowManager::OnSnapAssistEvent(SnapAssistEvent event)
+{
+	switch (event)
+	{
+	case SnapAssistEvent::FinishAnimation:
+		break;
+	case SnapAssistEvent::Quit:
+		break;
+	}
+	if (m_wndSnapAssist)
+	{
+		SnapWindowsToGridResult(m_wndSnapAssist->m_snapGridWndAni.wndPos);
+		if (m_wndSnapAssist->m_snapLayoutWnds.wnds.empty())
+		{
+			//m_wndSnapAssist->DestroyWindow();
+			m_wndSnapAssist.reset();
+		}
+	}
 }
 
 BOOL CSnapWindowManager::EnterDividing(const SnapWndMsg& msg)

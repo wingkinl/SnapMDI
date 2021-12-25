@@ -27,6 +27,7 @@ private:
 	void OnAnimationTimer(double timeDiff) override;
 private:
 	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
 
 	DECLARE_MESSAGE_MAP()
 private:

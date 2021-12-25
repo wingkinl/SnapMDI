@@ -33,7 +33,7 @@ public:
 #endif
 
 protected:
-
+	afx_msg BOOL OnEraseBkgnd(CDC*);
 // Generated message map functions
 protected:
 	DECLARE_MESSAGE_MAP()

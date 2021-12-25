@@ -124,6 +124,8 @@ public:
 	{
 		auto pWnd = (CSnapAssistWnd*)m_pWnd;
 		auto& data = pWnd->GetSnapGridWndAniData();
+		if (data.snapGridWndAni.empty())
+			return;
 		auto factor = pWnd->GetTransitionFactor();
 		ASSERT(data.snapGridWndAni.size() == data.wndPos.wnds.size());
 		for (size_t ii = 0; ii < data.snapGridWndAni.size(); ++ii)
@@ -279,7 +281,7 @@ BOOL CSnapAssistWnd::PreCreateWindow(CREATESTRUCT& cs)
 	return __super::PreCreateWindow(cs);
 }
 
-constexpr double AnimationDuration = 0.4;
+constexpr double AnimationDuration = 0.12;
 
 void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 {
@@ -290,6 +292,7 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 	{
 		factor = 1.0f;
 		m_bShowLayoutCell = true;
+		m_snapGridWndAni.snapGridWndAni.clear();
 	}
 	else
 	{
@@ -306,8 +309,9 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 	}
 	if (bFinish)
 	{
-		//m_snapGridWndAni.snapGridWndAni.clear();
 		FinishAnimationCleanup();
+		// Make sure this is the last line, because the m_pManager would destroy this window!
+		m_pManager->OnSnapAssistEvent(CSnapWindowManager::SnapAssistEvent::FinishAnimation);
 	}
 }
 
