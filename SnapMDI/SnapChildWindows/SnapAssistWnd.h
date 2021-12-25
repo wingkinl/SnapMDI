@@ -47,11 +47,11 @@ private:
 
 	void OnAnimationTimer(double timeDiff) override;
 
-	void PrepareMoreInfoForAnimation();
+	void PrepareForInitialMovingAnimation();
 private:
 	friend class CSnapWindowManager;
 	CSnapWindowManager* m_pManager;
-
+	// For the initial moving window animation only
 	SnapGridWndAniData	m_snapGridWndAni;
 
 	SnapLayoutWindows	m_snapLayoutWnds;

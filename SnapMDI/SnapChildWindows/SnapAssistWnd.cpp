@@ -147,7 +147,17 @@ public:
 		pWnd->ScreenToClient(&rect);
 		//PaintSnapRect(gg, rect);
 		Gdiplus::Bitmap bmp(info.hBmpWnd, nullptr);
-		gg.DrawImage(&bmp, rect.left, rect.top, rect.Width(), rect.Height());
+		Gdiplus::ColorMatrix colorMat = {
+			1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, factor, 0.0f,
+			0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+		};
+		Gdiplus::ImageAttributes imgAttr;
+		imgAttr.SetColorMatrix(&colorMat, Gdiplus::ColorMatrixFlagsDefault, Gdiplus::ColorAdjustTypeBitmap);
+		Gdiplus::Rect rc(rect.left, rect.top, rect.Width(), rect.Height());
+		gg.DrawImage(&bmp, rc, 0, 0, bmp.GetWidth(), bmp.GetHeight(), Gdiplus::UnitPixel, &imgAttr);
 	}
 };
 
@@ -213,14 +223,19 @@ void CSnapAssistWnd::Show()
 
 	m_renderImp->StartRendering();
 
-	UINT nFlags = SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER;
+	bool bShowAnimationForInitialMove = !m_snapGridWndAni.wndPos.wnds.empty() && ShouldDoAnimation();
+
+	UINT nFlags = SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE;
+	if (m_snapLayoutWnds.wnds.empty())
+		nFlags |= SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER;
+
 	SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0, nFlags);
 
-	if (!m_snapGridWndAni.wndPos.wnds.empty() && ShouldDoAnimation())
+	if (bShowAnimationForInitialMove)
 	{
 		m_aniStage = AnimateStage::Showing;
 		m_bShowLayoutCell = false;
-		PrepareMoreInfoForAnimation();
+		PrepareForInitialMovingAnimation();
 		m_factor = 0.0f;
 		ScheduleAnimation();
 	}
@@ -232,7 +247,7 @@ void CSnapAssistWnd::Show()
 	}
 }
 
-void CSnapAssistWnd::PrepareMoreInfoForAnimation()
+void CSnapAssistWnd::PrepareForInitialMovingAnimation()
 {
 	auto count = m_snapGridWndAni.wndPos.wnds.size();
 	m_snapGridWndAni.snapGridWndAni.resize(count);
@@ -285,11 +300,13 @@ constexpr double AnimationDuration = 0.12;
 
 void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 {
+	constexpr float factor_from = 0.2f, factor_to = 0.8f;
 	float factor = 0.f;
 	float from = m_factor;
 	bool bFinish = timeDiff >= AnimationDuration;
 	if (bFinish)
 	{
+		// Now that we have finished the animation, we want full factor for the grids
 		factor = 1.0f;
 		m_bShowLayoutCell = true;
 		m_snapGridWndAni.snapGridWndAni.clear();
@@ -297,16 +314,14 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 	else
 	{
 		auto dPos = timeDiff / AnimationDuration;
-		factor = (float)CalcSmoothPosF(dPos, from, 1.0f);
-		factor = std::max(factor, 0.0f);
-		factor = std::min(factor, 1.0f);
+		//factor = (float)CalcSmoothPosF(dPos, from, factor_to);
+		factor = (float)(factor_from + (factor_to - factor_from) * dPos);
+		factor = std::max(factor, factor_from);
+		factor = std::min(factor, factor_to);
 	}
 	m_factor = factor;
 
-	if (m_renderImp)
-	{
-		m_renderImp->OnAnimationUpdate();
-	}
+	m_renderImp->OnAnimationUpdate();
 	if (bFinish)
 	{
 		FinishAnimationCleanup();
