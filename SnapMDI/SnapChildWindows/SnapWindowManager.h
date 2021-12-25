@@ -72,6 +72,9 @@ public:
 
 	virtual void OnSnapSwitch(bool bPressed);
 
+	inline bool IsEnabled() const { return m_bEnable; }
+	void Enable(bool val) { m_bEnable = val; }
+
 	inline bool IsAnimationEnabled() const { return m_bEnableAnimation; }
 	void EnableAnimation(bool val) { m_bEnableAnimation = val; }
 
@@ -122,6 +125,8 @@ protected:
 	void SnapWindowsToGridResult(const SnapWindowGridPos& grids);
 
 	virtual bool GetOwnerLayoutForSnapAssist(SnapLayoutWindows& layout) const;
+
+	void FindMatchedWindowsInSnapLayout(SnapLayoutWindows& layout) const;
 
 	bool ShowSnapAssist(SnapLayoutWindows&& layout);
 
@@ -243,11 +248,15 @@ protected:
 	SnapTargetType		m_snapTarget = SnapTargetType::None;
 	SnapGridInfo		m_curGrid = {SnapGridType::None};
 
+	bool				m_bEnable = true;
 	bool				m_bEnableAnimation = true;
 	bool				m_bEnableSnapAssist = true;
 
+	// For snapping, does not include the active window
 	std::vector<ChildWndInfo>	m_vChildRects;
-
+	// For dividing, since we also use it for animation, and two animation (one for snapping,
+	// the other for dividing) can happen at the same time, we need another one instead of
+	// reusing the m_vChildRects above
 	std::vector<ChildWndInfo>	m_vDivideChildRects;
 	int							m_nActiveDivideWndIdx = -1;	// index to m_vDivideChildRects
 

@@ -244,10 +244,10 @@ void CSnapAssistWnd::PrepareMoreInfoForAnimation()
 	for (size_t ii = 0; ii < count; ++ii)
 	{
 		auto& wnd = m_snapGridWndAni.wndPos.wnds[ii];
-		auto& mi = m_snapGridWndAni.snapGridWndAni[ii];
-		::GetWindowRect(wnd.hWnd, &mi.rectOld);
+		auto& ani = m_snapGridWndAni.snapGridWndAni[ii];
+		::GetWindowRect(wnd.hWnd, &ani.rectOld);
 		
-		auto& rcOld = (CRect&)mi.rectOld;
+		auto& rcOld = (CRect&)ani.rectOld;
 		CBitmap bmpWnd;
 		bmpWnd.CreateCompatibleBitmap(&clientDC, rcOld.Width(), rcOld.Height());
 
@@ -258,7 +258,7 @@ void CSnapAssistWnd::PrepareMoreInfoForAnimation()
 
 		dc.SelectObject(pBitmapOld);
 
-		mi.hBmpWnd = (HBITMAP)bmpWnd.Detach();
+		ani.hBmpWnd = (HBITMAP)bmpWnd.Detach();
 	}
 }
 

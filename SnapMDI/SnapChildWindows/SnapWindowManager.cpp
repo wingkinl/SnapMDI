@@ -465,6 +465,8 @@ void CSnapWindowManager::InitSnap(CWnd* pWndOwner)
 
 SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 {
+	if (!IsEnabled())
+		return SnapWndMsg::HandleResult::Continue;
 	switch (msg.message)
 	{
 	case WM_ENTERSIZEMOVE:
@@ -704,7 +706,14 @@ void CSnapWindowManager::OnSnapToCurGrid()
 		if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Owner)
 		{
 			if (!m_vChildRects.empty())
+			{
 				GetOwnerLayoutForSnapAssist(layout);
+				ASSERT(layout.wnds.size() == layout.layout.cells.size());
+				if (!layout.wnds.empty())
+				{
+					FindMatchedWindowsInSnapLayout(layout);
+				}
+			}
 		}
 	}
 	if (!bSnapNow || !layout.wnds.empty())
@@ -859,6 +868,25 @@ bool CSnapWindowManager::GetOwnerLayoutForSnapAssist(SnapLayoutWindows& layout) 
 	}
 
 	return true;
+}
+
+void CSnapWindowManager::FindMatchedWindowsInSnapLayout(SnapLayoutWindows& layout) const
+{
+	ASSERT(!layout.wnds.empty());
+	for (size_t ii = 0; ii < layout.wnds.size(); ++ii)
+	{
+		if (layout.wnds[ii])
+			continue;
+		auto& cell = layout.layout.cells[ii];
+		for (auto& wi : m_vChildRects)
+		{
+			if (EqualRect(&wi.rect, &cell.rect))
+			{
+				layout.wnds[ii] = wi.hWndChild;
+				break;
+			}
+		}
+	}
 }
 
 CSnapAssistWnd* CSnapWindowManager::GetSnapAssistWnd()
