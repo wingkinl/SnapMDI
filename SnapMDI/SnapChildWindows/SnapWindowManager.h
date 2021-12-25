@@ -132,7 +132,7 @@ protected:
 
 	enum class SnapAssistEvent
 	{
-		Quit,
+		Exit,
 		FinishAnimation,
 	};
 
@@ -228,7 +228,7 @@ protected:
 	struct DividerWndInfo 
 	{
 		POINT pos;
-		std::unique_ptr<CGhostDividerWnd>	wnd;
+		CGhostDividerWnd*	wnd = nullptr;
 	};
 	std::vector<DividerWndInfo>	m_vGhostDividerWnds;
 

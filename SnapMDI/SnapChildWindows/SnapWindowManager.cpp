@@ -691,7 +691,7 @@ void CSnapWindowManager::OnSnapToCurGrid()
 		if (pWnd)
 		{
 			bSnapNow = false;
-			std::swap(pWnd->m_data.snapGridWnd.wndPos, grids);
+			std::swap(pWnd->m_data.initSnapGridWnds.wndPos, grids);
 		}
 	}
 #endif
@@ -916,6 +916,29 @@ bool CSnapWindowManager::ShowSnapAssist(SnapLayoutWindows&& layout)
 		ASSERT(0);
 		return false;
 	}
+
+	if (!layout.wnds.empty())
+	{
+		for (HWND hWnd = ::GetWindow(m_pWndOwner->GetSafeHwnd(), GW_CHILD); hWnd; hWnd = GetNextWindow(hWnd, GW_HWNDNEXT))
+		{
+			if (!IsWindowVisible(hWnd))
+				continue;
+			bool bAlreadyInLayout = false;
+			for (auto& wnd : layout.wnds)
+			{
+				if (hWnd == wnd)
+				{
+					bAlreadyInLayout = true;
+					break;
+				}
+			}
+			if (!bAlreadyInLayout)
+			{
+				pWnd->m_data.candidateWnds.push_back({ hWnd });
+			}
+		}
+	}
+
 	pWnd->m_data.snapLayoutWnds = std::move(layout);
 	pWnd->Show();
 	return true;
@@ -923,21 +946,31 @@ bool CSnapWindowManager::ShowSnapAssist(SnapLayoutWindows&& layout)
 
 void CSnapWindowManager::OnSnapAssistEvent(SnapAssistEvent event)
 {
+	if (!m_wndSnapAssist)
+	{
+		ASSERT(0);
+		return;
+	}
+	auto& data = m_wndSnapAssist->m_data;
+	bool bFinish = false;
 	switch (event)
 	{
 	case SnapAssistEvent::FinishAnimation:
+		bFinish = data.candidateWnds.empty();
 		break;
-	case SnapAssistEvent::Quit:
+	case SnapAssistEvent::Exit:
+		bFinish = true;
 		break;
 	}
-	if (m_wndSnapAssist)
+	if (!data.initSnapGridWnds.wndPos.wnds.empty())
 	{
-		SnapWindowsToGridResult(m_wndSnapAssist->m_data.snapGridWnd.wndPos);
-		if (m_wndSnapAssist->m_data.snapLayoutWnds.wnds.empty())
-		{
-			//m_wndSnapAssist->DestroyWindow();
-			m_wndSnapAssist.reset();
-		}
+		SnapWindowsToGridResult(data.initSnapGridWnds.wndPos);
+		data.initSnapGridWnds.RemoveAll();
+	}
+	if (bFinish)
+	{
+		m_wndSnapAssist->DestroyWindow();
+		m_wndSnapAssist.reset();
 	}
 }
 
@@ -1368,7 +1401,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 	{
 		if (!pWnd && helper.MatchDividerWindow(m_div, wi))
 		{
-			pWnd = wi.wnd.get();
+			pWnd = wi.wnd;
 		}
 		else
 		{
@@ -1381,11 +1414,11 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 
 	if (!pWnd)
 	{
-		m_vGhostDividerWnds.emplace_back();
-		auto& wndInfo = m_vGhostDividerWnds.back();
+		DividerWndInfo wndInfo = { 0 };
 		wndInfo.pos = m_div.pos;
-		wndInfo.wnd = std::make_unique<CGhostDividerWnd>(this, helper.m_bVertical);
-		pWnd = wndInfo.wnd.get();
+		wndInfo.wnd = new CGhostDividerWnd(this, helper.m_bVertical);
+		m_vGhostDividerWnds.emplace_back(wndInfo);
+		pWnd = wndInfo.wnd;
 		pWnd->Create(m_pWndOwner, m_div.pos, m_div.length);
 	}
 	pWnd->EnableAnimation(IsAnimationEnabled());
@@ -1413,11 +1446,11 @@ void CSnapWindowManager::HideGhostDividers()
 void CSnapWindowManager::OnGhostDividerWndHidden(CGhostDividerWnd* pWnd)
 {
 	auto it = std::find_if(m_vGhostDividerWnds.begin(), m_vGhostDividerWnds.end(), [pWnd](auto& wi) {
-		return wi.wnd.get() == pWnd;
+		return wi.wnd == pWnd;
 		});
 	if (it != m_vGhostDividerWnds.end())
 	{
-		pWnd->DestroyWindow();
+		it->wnd->DestroyWindow();
 		m_vGhostDividerWnds.erase(it);
 	}
 	else

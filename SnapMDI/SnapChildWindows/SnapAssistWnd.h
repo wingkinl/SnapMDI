@@ -28,6 +28,12 @@ struct SnapGridWndData
 {
 	SnapWindowGridPos			wndPos;
 	std::vector<InitSnapWnd>	initSnapWnd;
+
+	inline void RemoveAll()
+	{
+		wndPos.wnds.clear();
+		initSnapWnd.clear();
+	}
 };
 
 struct SnapCandidateWnd 
@@ -39,7 +45,7 @@ struct SnapCandidateWnd
 struct SnapAssistData 
 {
 	// For the initial moving window animation only
-	SnapGridWndData		snapGridWnd;
+	SnapGridWndData		initSnapGridWnds;
 
 	SnapLayoutWindows	snapLayoutWnds;
 
@@ -68,6 +74,10 @@ private:
 	void PrepareSnapAssist(bool bShowAnimationForInitialWnds);
 
 	void OnExitSnapAssist();
+private:
+	afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
+
+	DECLARE_MESSAGE_MAP()
 private:
 	friend class CSnapWindowManager;
 	CSnapWindowManager* m_pManager;

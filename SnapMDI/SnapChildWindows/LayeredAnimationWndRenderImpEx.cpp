@@ -13,7 +13,9 @@ BOOL CLayeredAnimationWndRenderImp::Create(CWnd* pWndOwner, LPCRECT pRect)
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = 0;
 	UINT nClassStyle = CS_HREDRAW | CS_VREDRAW;
-	return m_pWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+	HCURSOR hCursor = ::LoadCursor(nullptr, IDC_ARROW);
+	auto szClass = AfxRegisterWndClass(nClassStyle, hCursor);
+	return m_pWnd->CreateEx(dwExStyle, szClass, _T(""), dwStyle, rect, pWndOwner, NULL);
 }
 
 void CLayeredAnimationWndRenderImp::StartRendering()
@@ -96,7 +98,9 @@ BOOL CLayeredAnimationWndRenderImpAlpha::Create(CWnd* pWndOwner, LPCRECT pRect)
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = WS_EX_LAYERED;
 	UINT nClassStyle = 0;
-	BOOL bOK = m_pWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+	HCURSOR hCursor = ::LoadCursor(nullptr, IDC_ARROW);
+	auto szClass = AfxRegisterWndClass(nClassStyle, hCursor);
+	BOOL bOK = m_pWnd->CreateEx(dwExStyle, szClass, _T(""), dwStyle, rect, pWndOwner, NULL);
 
 	if (bOK)
 	{
@@ -228,7 +232,9 @@ BOOL CLayeredAnimationWndRenderImpDirectComposition::Create(CWnd* pWndOwner, LPC
 	DWORD dwStyle = WS_POPUP;
 	DWORD dwExStyle = WS_EX_NOREDIRECTIONBITMAP;
 	UINT nClassStyle = 0;
-	BOOL bOK = m_pWnd->CreateEx(dwExStyle, AfxRegisterWndClass(nClassStyle), _T(""), dwStyle, rect, pWndOwner, NULL);
+	HCURSOR hCursor = ::LoadCursor(nullptr, IDC_ARROW);
+	auto szClass = AfxRegisterWndClass(nClassStyle, hCursor);
+	BOOL bOK = m_pWnd->CreateEx(dwExStyle, szClass, _T(""), dwStyle, rect, pWndOwner, NULL);
 
 	return bOK;
 }

@@ -66,7 +66,6 @@ CGhostDividerWnd::CGhostDividerWnd(CSnapWindowManager* pManager, bool bVertical)
 
 CGhostDividerWnd::~CGhostDividerWnd()
 {
-	DestroyWindow();
 }
 
 BEGIN_MESSAGE_MAP(CGhostDividerWnd, CGhostDividerWndBase)

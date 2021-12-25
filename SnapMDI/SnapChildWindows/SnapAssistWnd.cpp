@@ -2,7 +2,6 @@
 #include "SnapAssistWnd.h"
 #include "SnapRenderImp.h"
 #include "SnapWindowManager.h"
-#include <VersionHelpers.h>
 
 #undef min
 #undef max
@@ -100,9 +99,12 @@ public:
 					m_pWnd->ScreenToClient(&rect);
 					PaintSnapRect(gg, rect);
 				}
+				m_initSnapBmps.clear();
 			}
-
-			PaintInitSnapGridWnds(gg);
+			else
+			{
+				PaintInitSnapGridWnds(gg);
+			}
 		}
 
 		BLENDFUNCTION bf;
@@ -126,16 +128,19 @@ public:
 	{
 		auto pWnd = (CSnapAssistWnd*)m_pWnd;
 		auto& data = pWnd->GetData();
-		auto& snapGridWnd = data.snapGridWnd;
+		auto& snapGridWnd = data.initSnapGridWnds;
 		auto& initSnapWnd = snapGridWnd.initSnapWnd;
 		if (initSnapWnd.empty())
 			return;
 		ASSERT(initSnapWnd.size() == snapGridWnd.wndPos.wnds.size());
+		if (m_initSnapBmps.empty())
+		{
+			m_initSnapBmps.resize(initSnapWnd.size());
+		}
 		for (size_t ii = 0; ii < initSnapWnd.size(); ++ii)
 		{
 			auto& info = initSnapWnd[ii];
 			auto& wnd = snapGridWnd.wndPos.wnds[ii];
-			auto hBmp = info.bmp.hBmp;
 			
 			CRect rect;
 			rect.left = (LONG)(info.rectOld.left + (wnd.rect.left - info.rectOld.left) * data.factor);
@@ -144,7 +149,14 @@ public:
 			rect.bottom = (LONG)(info.rectOld.bottom + (wnd.rect.bottom - info.rectOld.bottom) * data.factor);
 			pWnd->ScreenToClient(&rect);
 			//PaintSnapRect(gg, rect);
-			Gdiplus::Bitmap bmp(hBmp, nullptr);
+			auto& bi = m_initSnapBmps[ii];
+			if (!bi.bmp)
+			{
+				bi.bmp = std::make_unique<Gdiplus::Bitmap>(info.bmp.hBmp, nullptr);
+				bi.szBmp.cx = bi.bmp->GetWidth();
+				bi.szBmp.cy = bi.bmp->GetHeight();
+			}
+
 			Gdiplus::ColorMatrix colorMat = {
 				1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 				0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
@@ -155,9 +167,16 @@ public:
 			Gdiplus::ImageAttributes imgAttr;
 			imgAttr.SetColorMatrix(&colorMat, Gdiplus::ColorMatrixFlagsDefault, Gdiplus::ColorAdjustTypeBitmap);
 			Gdiplus::Rect rc(rect.left, rect.top, rect.Width(), rect.Height());
-			gg.DrawImage(&bmp, rc, 0, 0, bmp.GetWidth(), bmp.GetHeight(), Gdiplus::UnitPixel, &imgAttr);
+			gg.DrawImage(bi.bmp.get(), rc, 0, 0, bi.szBmp.cx, bi.szBmp.cy, Gdiplus::UnitPixel, &imgAttr);
 		}
 	}
+private:
+	struct InitSnapWndBmpInfo
+	{
+		std::unique_ptr<Gdiplus::Bitmap>	bmp;
+		CSize szBmp;
+	};
+	std::vector<InitSnapWndBmpInfo> m_initSnapBmps;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -170,8 +189,11 @@ CSnapAssistWnd::CSnapAssistWnd(CSnapWindowManager* pManager)
 
 CSnapAssistWnd::~CSnapAssistWnd()
 {
-	DestroyWindow();
 }
+
+BEGIN_MESSAGE_MAP(CSnapAssistWnd, CSnapAssistWndBase)
+	ON_WM_ACTIVATE()
+END_MESSAGE_MAP()
 
 BOOL CSnapAssistWnd::Create(CWnd* pWndOwner)
 {
@@ -222,11 +244,11 @@ void CSnapAssistWnd::Show()
 
 	m_renderImp->StartRendering();
 
-	bool bShowAnimationForInitialWnds = !m_data.snapGridWnd.wndPos.wnds.empty() && ShouldDoAnimation();
+	bool bShowAnimationForInitialWnds = !m_data.initSnapGridWnds.wndPos.wnds.empty() && ShouldDoAnimation();
 	PrepareSnapAssist(bShowAnimationForInitialWnds);
 
 	UINT nFlags = SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE;
-	if (m_data.snapLayoutWnds.wnds.empty())
+	if (m_data.candidateWnds.empty())
 		nFlags |= SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER;
 
 	SetWindowPos(&CWnd::wndTop, 0, 0, 0, 0, nFlags);
@@ -272,36 +294,42 @@ void CSnapAssistWnd::PrepareSnapAssist(bool bShowAnimationForInitialWnds)
 
 	if (bShowAnimationForInitialWnds)
 	{
-		auto count = m_data.snapGridWnd.wndPos.wnds.size();
-		m_data.snapGridWnd.initSnapWnd.resize(count);
+		auto count = m_data.initSnapGridWnds.wndPos.wnds.size();
+		m_data.initSnapGridWnds.initSnapWnd.resize(count);
 
 		for (size_t ii = 0; ii < count; ++ii)
 		{
-			auto& wnd = m_data.snapGridWnd.wndPos.wnds[ii];
-			auto& initSnap = m_data.snapGridWnd.initSnapWnd[ii];
+			auto& wnd = m_data.initSnapGridWnds.wndPos.wnds[ii];
+			auto& initSnap = m_data.initSnapGridWnds.initSnapWnd[ii];
 			::GetWindowRect(wnd.hWnd, &initSnap.rectOld);
 
 			initSnap.bmp.hBmp = locCaptureWndBmp(wnd.hWnd);
 		}
 	}
 
-	// Windows 8: The WS_EX_LAYERED style is supported for top-level windows 
-	// and child windows. Previous Windows versions support WS_EX_LAYERED 
-	// only for top-level windows.
-#if 0
-	bool bSupportChildLayered = IsWindows8OrGreater();
-
 	for (auto& wnd : m_data.candidateWnds)
 	{
 		wnd.bmp.hBmp = locCaptureWndBmp(wnd.hWnd);
-		if (bSupportChildLayered)
-		{
-			CWnd* pWnd = CWnd::FromHandle(wnd.hWnd);
-			pWnd->ModifyStyleEx(0, WS_EX_LAYERED);
-			pWnd->SetLayeredWindowAttributes(0, 0, LWA_ALPHA);
-		}
+		::ShowWindow(wnd.hWnd, SW_HIDE);
 	}
-#endif
+}
+
+void CSnapAssistWnd::OnExitSnapAssist()
+{
+	for (auto& wnd : m_data.candidateWnds)
+	{
+		::ShowWindow(wnd.hWnd, SW_SHOW);
+	}
+	m_pManager->OnSnapAssistEvent(CSnapWindowManager::SnapAssistEvent::Exit);
+}
+
+void CSnapAssistWnd::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized)
+{
+	__super::OnActivate(nState, pWndOther, bMinimized);
+	if (nState == WA_INACTIVE)
+	{
+		OnExitSnapAssist();
+	}
 }
 
 BOOL CSnapAssistWnd::PreCreateWindow(CREATESTRUCT& cs)
@@ -323,8 +351,6 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 		// Now that we have finished the animation, we want full factor for the grids
 		factor = 1.0f;
 		m_data.bShowLayoutCell = true;
-		// We don't need to draw the initial window animation now
-		m_data.snapGridWnd.initSnapWnd.clear();
 	}
 	else
 	{
