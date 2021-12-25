@@ -10,7 +10,58 @@ namespace SnapChildWindows {
 
 class CSnapAssistRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
 {
+	std::vector<ComPtr<ID2D1Bitmap>> m_initSnapBmps;
 public:
+	void CreateDeviceResourcesEx(ID2D1DeviceContext* pDC) override
+	{
+		__super::CreateDeviceResourcesEx(pDC);
+
+		auto pWnd = (CSnapAssistWnd*)m_pWnd;
+		auto& data = pWnd->GetData();
+		if (!data.bShowLayoutCell)
+		{
+			auto& snapGridWnd = data.initSnapGridWnds;
+			auto& initSnapWnd = snapGridWnd.initSnapWnd;
+			if (!initSnapWnd.empty())
+			{
+				m_initSnapBmps.clear();
+				m_initSnapBmps.resize(initSnapWnd.size());
+
+				CClientDC clientDC(m_pWnd);
+
+				for (size_t ii = 0; ii < initSnapWnd.size(); ++ii)
+				{
+					auto& info = initSnapWnd[ii];
+
+					BITMAP bmpSizeInfo = { 0 };
+					::GetObject(info.bmp.hBmp, sizeof(BITMAP), &bmpSizeInfo);
+					BITMAPINFO bmpData;
+					memset(&bmpData, 0, sizeof(BITMAPINFO));
+					bmpData.bmiHeader.biSize = sizeof(bmpData.bmiHeader);
+					bmpData.bmiHeader.biHeight = -bmpSizeInfo.bmHeight;
+					bmpData.bmiHeader.biWidth = bmpSizeInfo.bmWidth;
+					bmpData.bmiHeader.biPlanes = bmpSizeInfo.bmPlanes;
+					bmpData.bmiHeader.biBitCount = bmpSizeInfo.bmBitsPixel;
+					ASSERT(bmpSizeInfo.bmWidth > 0 && bmpSizeInfo.bmHeight > 0);
+					auto pBuff = new char[bmpSizeInfo.bmWidth * bmpSizeInfo.bmHeight * 4];
+					::GetDIBits(clientDC.GetSafeHdc(), info.bmp.hBmp, 0, bmpSizeInfo.bmHeight, (void*)pBuff, &bmpData, DIB_RGB_COLORS);
+
+					D2D1_BITMAP_PROPERTIES bmpPorp;
+					bmpPorp.dpiX = 0.0f;
+					bmpPorp.dpiY = 0.0f;
+					bmpPorp.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+					bmpPorp.pixelFormat.alphaMode = D2D1_ALPHA_MODE_IGNORE;
+
+					auto& d2Bmp = m_initSnapBmps[ii];
+					D2D1_SIZE_U bmpSize = { (UINT32)bmpSizeInfo.bmWidth, (UINT32)bmpSizeInfo.bmHeight};
+					pDC->CreateBitmap(bmpSize, pBuff, 4 * bmpSizeInfo.bmWidth, bmpPorp, d2Bmp.ReleaseAndGetAddressOf());
+
+					delete [] pBuff;
+				}
+			}
+		}
+	}
+
 	BOOL HandlePaint() override
 	{
 		try
@@ -37,15 +88,20 @@ public:
 
 				if (data.bShowLayoutCell)
 				{
-					for (size_t ii = 0; ii < data.snapLayoutWnds.layout.cells.size(); ++ii)
+					auto& cells = data.snapLayoutWnds.layout.cells;
+					for (size_t ii = 0; ii < cells.size(); ++ii)
 					{
 						if (data.snapLayoutWnds.wnds[ii])
 							continue;
-						auto& cell = data.snapLayoutWnds.layout.cells[ii];
+						auto& cell = cells[ii];
 						RECT rect = cell.rect;
 						m_pWnd->ScreenToClient(&rect);
 						PaintSnapRect(dc.Get(), rect);
 					}
+				}
+				else
+				{
+					PaintInitSnapGridWnds(dc.Get());
 				}
 			}
 
@@ -58,6 +114,76 @@ public:
 			ReleaseDeviceResources();
 		}
 		return TRUE;
+	}
+
+	void PaintInitSnapGridWnds(ID2D1DeviceContext* pDC)
+	{
+		auto pWnd = (CSnapAssistWnd*)m_pWnd;
+		auto& data = pWnd->GetData();
+		auto& snapGridWnd = data.initSnapGridWnds;
+		auto& initSnapWnd = snapGridWnd.initSnapWnd;
+		if (initSnapWnd.empty())
+			return;
+		ASSERT(initSnapWnd.size() == snapGridWnd.wndPos.wnds.size());
+		ASSERT(m_initSnapBmps.size() == initSnapWnd.size());
+		for (size_t ii = 0; ii < initSnapWnd.size(); ++ii)
+		{
+			auto& info = initSnapWnd[ii];
+			auto& wnd = snapGridWnd.wndPos.wnds[ii];
+
+			CRect rect;
+			rect.left = (LONG)(info.rectOld.left + (wnd.rect.left - info.rectOld.left) * data.factor);
+			rect.top = (LONG)(info.rectOld.top + (wnd.rect.top - info.rectOld.top) * data.factor);
+			rect.right = (LONG)(info.rectOld.right + (wnd.rect.right - info.rectOld.right) * data.factor);
+			rect.bottom = (LONG)(info.rectOld.bottom + (wnd.rect.bottom - info.rectOld.bottom) * data.factor);
+			pWnd->ScreenToClient(&rect);
+
+			D2D_RECT_F rectd2;
+			rectd2.left = DPtoLP(rect.left, m_dpi.x);
+			rectd2.top = DPtoLP(rect.top, m_dpi.y);
+			rectd2.right = DPtoLP(rect.right, m_dpi.y);
+			rectd2.bottom = DPtoLP(rect.bottom, m_dpi.y);
+
+			auto& bi = m_initSnapBmps[ii];
+
+			pDC->DrawBitmap(bi.Get(), rectd2, data.factor);
+		}
+	}
+
+	BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult) override
+	{
+		switch (message)
+		{
+		case WM_NCHITTEST:
+			if (HandleNCHitTest(pResult))
+				return TRUE;
+			break;
+		}
+		return __super::OnWndMsg(message, wParam, lParam, pResult);
+	}
+
+	BOOL HandleNCHitTest(LRESULT* pResult) const
+	{
+		auto pWnd = (CSnapAssistWnd*)m_pWnd;
+		auto& data = pWnd->GetData();
+		if (!data.bShowLayoutCell)
+			return FALSE;
+		POINT ptCursor;
+		GetCursorPos(&ptCursor);
+		auto& cells = data.snapLayoutWnds.layout.cells;
+		for (size_t ii = 0; ii < cells.size(); ++ii)
+		{
+			if (data.snapLayoutWnds.wnds[ii])
+			{
+				auto& cell = cells[ii];
+				if (PtInRect(&cell.rect, ptCursor))
+				{
+					*pResult = HTTRANSPARENT;
+					return TRUE;
+				}
+			}
+		}
+		return FALSE;
 	}
 };
 
@@ -90,11 +216,12 @@ public:
 
 			if (data.bShowLayoutCell)
 			{
-				for (size_t ii = 0; ii < data.snapLayoutWnds.layout.cells.size(); ++ii)
+				auto& cells = data.snapLayoutWnds.layout.cells;
+				for (size_t ii = 0; ii < cells.size(); ++ii)
 				{
 					if (data.snapLayoutWnds.wnds[ii])
 						continue;
-					auto& cell = data.snapLayoutWnds.layout.cells[ii];
+					auto& cell = cells[ii];
 					RECT rect = cell.rect;
 					m_pWnd->ScreenToClient(&rect);
 					PaintSnapRect(gg, rect);
@@ -202,11 +329,11 @@ BOOL CSnapAssistWnd::Create(CWnd* pWndOwner)
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-// 		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
-// 		{
-// 			m_renderImp = std::make_shared<CSnapAssistRenderImpDirectComposition>();
-// 			break;
-// 		}
+ 		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
+ 		{
+ 			m_renderImp = std::make_shared<CSnapAssistRenderImpDirectComposition>();
+ 			break;
+ 		}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
 		if (CLayeredAnimationWndRenderImpAlpha::IsApplicable())
