@@ -104,7 +104,8 @@ protected:
 		None	= 0x00,
 		Owner	= 0x01,
 		Child	= 0x02,
-		Custom	= 0x04,
+		Slot	= 0x04,
+		Custom	= 0x08,
 	};
 
 	enum
@@ -164,6 +165,7 @@ protected:
 		None			= (DWORD)SnapTargetType::None,
 		Owner			= (DWORD)SnapTargetType::Owner,
 		Child			= (DWORD)SnapTargetType::Child,
+		Slot			= (DWORD)SnapTargetType::Slot,
 		Custom			= (DWORD)SnapTargetType::Custom,
 		Left			= 0x00000100,
 		Right			= 0x00000200,
@@ -193,6 +195,8 @@ protected:
 	virtual SnapGridInfo GetSnapChildGridInfo(CPoint pt) const;
 
 	virtual SnapGridInfo GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const;
+
+	virtual SnapGridInfo GetSnapEmptySlotGridInfo(CPoint pt) const;
 private:
 	void PreSnapInitialize();
 

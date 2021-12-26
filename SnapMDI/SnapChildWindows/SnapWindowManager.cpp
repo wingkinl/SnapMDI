@@ -1120,7 +1120,7 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 	helper.m_pCurWnd = msg.pHelper->GetWnd();
 
 	helper.InitChildWndInfosForSnap();
-	SnapTargetType targetType = SnapTargetType::Owner;
+	SnapTargetType targetType = (SnapTargetType)((DWORD)SnapTargetType::Owner|(DWORD)SnapTargetType::Slot);
 	bool bCheckAdjacentChild = helper.m_nStickToOwnerCount > 0;
 	if (bCheckAdjacentChild)
 		targetType = (SnapTargetType)((DWORD)targetType | (DWORD)SnapTargetType::Child);
@@ -1146,6 +1146,12 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 	if ((BYTE)m_snapTarget & (BYTE)SnapTargetType::Child)
 	{
 		auto grid = GetSnapChildGridInfo(pt);
+		if (grid.type != SnapGridType::None)
+			return grid;
+	}
+	if ((BYTE)m_snapTarget & (BYTE)SnapTargetType::Slot)
+	{
+		auto grid = GetSnapEmptySlotGridInfo(pt);
 		if (grid.type != SnapGridType::None)
 			return grid;
 	}
@@ -1201,6 +1207,8 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 {
 	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
+	if (m_vChildRects.empty())
+		return grid;
 	if (!CanDoSnapping(SnapTargetType::Child))
 		return grid;
 	for (auto& wnd : m_vChildRects)
@@ -1250,6 +1258,64 @@ auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& c
 	{
 		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Child);
 	}
+	return grid;
+}
+
+auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridInfo
+{
+	SnapGridInfo grid = { (SnapGridType)SnapTargetType::None, m_rcOwner };
+	if (m_vChildRects.empty())
+		return grid;
+	if (!CanDoSnapping(SnapTargetType::Slot))
+		return grid;
+	size_t nSize = m_vChildRects.size() * 2 + 2;
+	std::vector<LONG> vx; vx.reserve(nSize);
+	std::vector<LONG> vy; vy.reserve(nSize);
+
+	vx.push_back(m_rcOwner.left);
+	vx.push_back(m_rcOwner.right);
+	vy.push_back(m_rcOwner.top);
+	vy.push_back(m_rcOwner.bottom);
+
+	for (auto& wnd : m_vChildRects)
+	{
+		vx.push_back(wnd.rect.left);
+		vx.push_back(wnd.rect.right);
+		vy.push_back(wnd.rect.top);
+		vy.push_back(wnd.rect.bottom);
+	}
+
+	std::sort(vx.begin(), vx.end());
+	std::sort(vy.begin(), vy.end());
+
+	constexpr LONG nTolerance = 1;
+	auto end = std::remove_if(vx.begin(), vx.end(), [lastPos=m_rcOwner.left - nTolerance*10, nTolerance](LONG pos) mutable {
+		if (std::abs(pos - lastPos) < nTolerance)
+			return true;
+		lastPos = pos;
+		return false;
+	});
+	vx.erase(end, vx.end());
+
+	end = std::remove_if(vy.begin(), vy.end(), [lastPos = m_rcOwner.top - nTolerance*10, nTolerance](LONG pos) mutable {
+		if (std::abs(pos - lastPos) < nTolerance)
+			return true;
+		lastPos = pos;
+		return false;
+	});
+	vy.erase(end, vy.end());
+
+	auto itX = std::upper_bound(vx.begin(), vx.end(), pt.x);
+	if (itX == vx.end() || itX == vx.begin())
+		return grid;
+	auto itY = std::upper_bound(vy.begin(), vy.end(), pt.y);
+	if (itY == vy.end() || itY == vy.begin())
+		return grid;
+	grid.rect.left = *(itX-1);
+	grid.rect.right = *itX;
+	grid.rect.top = *(itY-1);
+	grid.rect.bottom = *itY;
+	grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Slot);
 	return grid;
 }
 
