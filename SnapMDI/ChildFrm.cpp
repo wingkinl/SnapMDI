@@ -60,12 +60,8 @@ void CChildFrame::Dump(CDumpContext& dc) const
 LRESULT CChildFrame::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	SnapWndMsg msg = {&m_snapHelper, message, wParam, lParam};
-	auto handleType = m_snapHelper.PreWndMsg(msg);
-	if (handleType == SnapWndMsg::HandleResult::Handled)
+	if (m_snapHelper.PreWndMsg(msg))
 		return msg.result;
-	msg.result = __super::WindowProc(message, wParam, lParam);
-	if (handleType == SnapWndMsg::HandleResult::NeedPostWndMsg)
-		return m_snapHelper.PostWndMsg(msg);
-	return msg.result;
+	return __super::WindowProc(message, wParam, lParam);
 }
 

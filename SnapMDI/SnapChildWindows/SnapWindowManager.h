@@ -20,13 +20,6 @@ struct SnapWndMsg
 	WPARAM wp;
 	LPARAM lp;
 	LRESULT result;
-
-	enum class HandleResult
-	{
-		Continue,
-		Handled,
-		NeedPostWndMsg,
-	};
 };
 
 struct SnapCellInfo 
@@ -81,7 +74,7 @@ public:
 	inline bool IsSnapAssistEnabled() const { return m_bEnableSnapAssist; }
 	void EnableSnapAssist(bool val) { m_bEnableSnapAssist = val; }
 protected:
-	SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg);
+	BOOL PreWndMsg(SnapWndMsg& msg);
 
 	void HandleEnterSizeMove(SnapWndMsg& msg);
 	
@@ -317,14 +310,9 @@ public:
 		return m_pWnd;
 	}
 
-	inline SnapWndMsg::HandleResult PreWndMsg(SnapWndMsg& msg)
+	inline BOOL PreWndMsg(SnapWndMsg& msg)
 	{
 		return m_pManager->PreWndMsg(msg);
-	}
-	inline LRESULT PostWndMsg(SnapWndMsg& msg)
-	{
-		//return m_pManager->PostWndMsg(msg);
-		return 0;
 	}
 protected:
 	CSnapWindowManager* m_pManager = nullptr;

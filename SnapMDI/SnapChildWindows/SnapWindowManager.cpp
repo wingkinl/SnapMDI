@@ -463,10 +463,10 @@ void CSnapWindowManager::InitSnap(CWnd* pWndOwner)
 	m_pWndOwner = pWndOwner;
 }
 
-SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
+BOOL CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 {
 	if (!IsEnabled())
-		return SnapWndMsg::HandleResult::Continue;
+		return FALSE;
 	switch (msg.message)
 	{
 	case WM_ENTERSIZEMOVE:
@@ -502,7 +502,7 @@ SnapWndMsg::HandleResult CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 		HandleNCMouseLeave(msg);
 		break;
 	}
-	return SnapWndMsg::HandleResult::Continue;
+	return FALSE;
 }
 
 void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
