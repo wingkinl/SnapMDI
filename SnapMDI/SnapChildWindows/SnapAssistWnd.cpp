@@ -469,9 +469,7 @@ constexpr double AnimationDuration = 0.12;
 
 void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 {
-	constexpr float factor_from = 0.2f, factor_to = 0.8f;
 	float factor = 0.f;
-	float from = m_data.factor;
 	bool bFinish = timeDiff >= AnimationDuration;
 	if (bFinish)
 	{
@@ -481,11 +479,13 @@ void CSnapAssistWnd::OnAnimationTimer(double timeDiff)
 	}
 	else
 	{
+		constexpr float factor_min = 0.2f, factor_max = 0.8f;
+		const float from = m_data.factor;
 		auto dPos = timeDiff / AnimationDuration;
-		//factor = (float)CalcSmoothPosF(dPos, from, factor_to);
-		factor = (float)(factor_from + (factor_to - factor_from) * dPos);
-		factor = std::max(factor, factor_from);
-		factor = std::min(factor, factor_to);
+		//factor = (float)CalcSmoothPosF(dPos, from, factor_max);
+		factor = (float)(from + (factor_max - from) * dPos);
+		factor = std::max(factor, factor_min);
+		factor = std::min(factor, factor_max);
 	}
 	m_data.factor = factor;
 

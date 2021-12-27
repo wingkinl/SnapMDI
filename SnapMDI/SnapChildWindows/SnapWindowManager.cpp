@@ -1160,9 +1160,9 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 
 BOOL CSnapWindowManager::CanDoSnapping(SnapTargetType target) const
 {
-	if (CheckSnapSwitch())
-		return false;
-	return true;
+	bool bSwitch = CheckSnapSwitch();
+	bool bReverse = target == SnapTargetType::Slot;
+	return !(bSwitch ^ bReverse);
 }
 
 auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
@@ -1268,6 +1268,13 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 		return grid;
 	if (!CanDoSnapping(SnapTargetType::Slot))
 		return grid;
+
+	for (auto& wnd : m_vChildRects)
+	{
+		if (PtInRect(&wnd.rect, pt))
+			return grid;
+	}
+
 	size_t nSize = m_vChildRects.size() * 2 + 2;
 	std::vector<LONG> vx; vx.reserve(nSize);
 	std::vector<LONG> vy; vy.reserve(nSize);
@@ -1321,17 +1328,9 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 
 void CSnapWindowManager::OnSnapSwitch(bool bPressed)
 {
-	if (bPressed)
-	{
-		m_curGrid.type = SnapGridType::None;
-		m_wndSnapPreview->Hide();
-	}
-	else
-	{
-		CPoint ptCurrent;
-		GetCursorPos(&ptCurrent);
-		OnMoving(ptCurrent);
-	}
+	CPoint ptCurrent;
+	GetCursorPos(&ptCurrent);
+	OnMoving(ptCurrent);
 }
 
 enum

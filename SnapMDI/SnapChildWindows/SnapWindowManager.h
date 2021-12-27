@@ -202,7 +202,7 @@ private:
 
 	void EnableSnapSwitchCheck(bool bEnable);
 
-	bool CheckSnapSwitch() const;
+	virtual bool CheckSnapSwitch() const;
 
 	static void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
@@ -257,6 +257,7 @@ protected:
 	bool				m_bEnableSnapAssist = true;
 
 	// For snapping, does not include the active window
+	// Sorted by Z order, the first one is at the top of the Z order.
 	std::vector<ChildWndInfo>	m_vChildRects;
 	// For dividing, since we also use it for animation, and two animation (one for snapping,
 	// the other for dividing) can happen at the same time, we need another one instead of
