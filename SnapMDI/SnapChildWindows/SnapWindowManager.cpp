@@ -1291,6 +1291,10 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 	if (!CanDoSnapping(SnapTargetType::Slot))
 		return grid;
 
+	if ( pt.x <= m_rcOwner.left || pt.y <= m_rcOwner.top
+		|| pt.x >= m_rcOwner.right || pt.y >= m_rcOwner.bottom)
+		return grid;
+
 	size_t nSize = m_vChildRects.size() * 2 + 2;
 	std::vector<LONG> vx; vx.reserve(nSize);
 	std::vector<LONG> vy; vy.reserve(nSize);
@@ -1313,33 +1317,100 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 	std::sort(vx.begin(), vx.end());
 	std::sort(vy.begin(), vy.end());
 
-	constexpr LONG nTolerance = 1;
-	auto end = std::remove_if(vx.begin(), vx.end(), [lastPos=m_rcOwner.left - nTolerance*10, nTolerance](LONG pos) mutable {
-		if (std::abs(pos - lastPos) < nTolerance)
+	auto end = std::remove_if(vx.begin(), vx.end(), [lastPos=LONG_MIN](LONG pos) mutable {
+		if (lastPos == pos)
 			return true;
 		lastPos = pos;
 		return false;
 	});
 	vx.erase(end, vx.end());
+	if (vx.size() < 2)
+		return grid;
 
-	end = std::remove_if(vy.begin(), vy.end(), [lastPos = m_rcOwner.top - nTolerance*10, nTolerance](LONG pos) mutable {
-		if (std::abs(pos - lastPos) < nTolerance)
+	end = std::remove_if(vy.begin(), vy.end(), [lastPos=LONG_MIN](LONG pos) mutable {
+		if (lastPos == pos)
 			return true;
 		lastPos = pos;
 		return false;
 	});
 	vy.erase(end, vy.end());
+	if (vy.size() < 2)
+		return grid;
 
-	auto itX = std::upper_bound(vx.begin(), vx.end(), pt.x);
-	if (itX == vx.end() || itX == vx.begin())
-		return grid;
-	auto itY = std::upper_bound(vy.begin(), vy.end(), pt.y);
-	if (itY == vy.end() || itY == vy.begin())
-		return grid;
-	grid.rect.left = *(itX-1);
-	grid.rect.right = *itX;
-	grid.rect.top = *(itY-1);
-	grid.rect.bottom = *itY;
+	std::vector <std::vector<bool>> vWndGrids;
+	vWndGrids.resize(vy.size() - 1);
+	for (auto& gridRow : vWndGrids)
+		gridRow.resize(vx.size() - 1);
+
+	for (auto& wnd : m_vChildRects)
+	{
+		auto& rect = wnd.rect;
+		// must exist, no checking
+		auto itx1 = std::lower_bound(vx.begin(), vx.end(), rect.left);
+		auto itx2 = std::lower_bound(itx1, vx.end(), rect.right);
+		auto ity1 = std::lower_bound(vy.begin(), vy.end(), rect.top);
+		auto ity2 = std::lower_bound(ity1, vy.end(), rect.bottom);
+		auto nx1 = std::distance(vx.begin(), itx1);
+		auto nx2 = std::distance(vx.begin(), itx2);
+		auto ny1 = std::distance(vy.begin(), ity1);
+		auto ny2 = std::distance(vy.begin(), ity2);
+		for (auto yy = ny1; yy < ny2; ++yy)
+		{
+			auto& gridRow = vWndGrids[yy];
+			for (auto xx = nx1; xx < nx2; ++xx)
+			{
+				gridRow[xx] = true;
+			}
+		}
+	}
+
+	// must exist, no checking
+	auto itx = std::lower_bound(vx.begin(), vx.end(), pt.x);
+	auto ity = std::lower_bound(vy.begin(), vy.end(), pt.y);
+	auto nx = (int)std::distance(vx.begin(), itx) - 1;
+	auto ny = (int)std::distance(vy.begin(), ity) - 1;
+
+	auto nYMin = -1;
+	for (auto yy = ny-1; yy >= 0; --yy)
+	{
+		auto& gridRow = vWndGrids[yy];
+		if (gridRow[nx])
+		{
+			nYMin = yy+1;
+			break;
+		}
+	}
+	if (nYMin < 0)
+		nYMin = 0;
+	int nXMin = 0, nXMax = (int)vx.size()-1;
+	for (auto yy = nYMin; yy <= ny; ++yy)
+	{
+		auto& gridRow = vWndGrids[yy];
+		for (auto xl = nx-1; xl >= nXMin; --xl)
+		{
+			if (gridRow[xl])
+			{
+				if (xl+1 > nXMin)
+					nXMin = xl+1;
+				break;
+			}
+		}
+		for (auto xr = nx+1; xr < nXMax; ++xr)
+		{
+			if (gridRow[xr])
+			{
+				if (xr < nXMax)
+					nXMax = xr;
+				break;
+			}
+		}
+	}
+
+	grid.rect.left		= vx[nXMin];
+	grid.rect.top		= vy[nYMin];
+	grid.rect.right		= vx[nXMax];
+	grid.rect.bottom	= vy[ny+1];
+
 	grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Slot);
 	return grid;
 }
