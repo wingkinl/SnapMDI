@@ -531,7 +531,7 @@ void CSnapWindowManager::HandleExitSizeMove(SnapWndMsg& msg)
 	if (m_bIsMoving)
 	{
 		ASSERT(msg.pHelper == m_pCurSnapWnd);
-		StopMoving(m_bAborted || !CanDoSnapping(m_snapTarget));
+		StopMoving(m_bAborted);
 		m_bIsMoving = FALSE;
 	}
 	else if (m_bDividing)
@@ -672,7 +672,9 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 
 	if (!bAbort && m_curGrid.type != SnapGridType::None)
 	{
-		OnSnapToCurGrid();
+		auto targetType = (SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask);
+		if (CanDoSnapping(targetType))
+			OnSnapToCurGrid();
 	}
 
 	m_curGrid = { SnapGridType::None };
@@ -1211,12 +1213,32 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 		return grid;
 	if (!CanDoSnapping(SnapTargetType::Child))
 		return grid;
-	for (auto& wnd : m_vChildRects)
+	int nCount = (int)m_vChildRects.size();
+	for (int ii = 0; ii < nCount; ++ii)
 	{
+		auto& wnd = m_vChildRects[ii];
 		if (PtInRect(&wnd.rect, pt))
 		{
 			if (wnd.bAdjacentToOwner || wnd.bAdjacentToSibling)
-				return GetSnapChildGridInfoEx(pt, wnd);
+			{
+				bool bOverlapped = false;
+				for (int jj = ii-1; jj >= 0; --jj)
+				{
+					auto& wnd2 = m_vChildRects[jj];
+					RECT temp;
+					if (IntersectRect(&temp, &wnd.rect, &wnd2.rect))
+					{
+						bOverlapped = true;
+						break;
+					}
+				}
+				if (!bOverlapped)
+				{
+					auto gridTemp = GetSnapChildGridInfoEx(pt, wnd);
+					if (gridTemp.type != SnapGridType::None)
+						return gridTemp;
+				}
+			}
 			break;
 		}
 	}
@@ -1269,12 +1291,6 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 	if (!CanDoSnapping(SnapTargetType::Slot))
 		return grid;
 
-	for (auto& wnd : m_vChildRects)
-	{
-		if (PtInRect(&wnd.rect, pt))
-			return grid;
-	}
-
 	size_t nSize = m_vChildRects.size() * 2 + 2;
 	std::vector<LONG> vx; vx.reserve(nSize);
 	std::vector<LONG> vy; vy.reserve(nSize);
@@ -1286,6 +1302,8 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 
 	for (auto& wnd : m_vChildRects)
 	{
+		if (PtInRect(&wnd.rect, pt))
+			return grid;
 		vx.push_back(wnd.rect.left);
 		vx.push_back(wnd.rect.right);
 		vy.push_back(wnd.rect.top);
@@ -1330,7 +1348,10 @@ void CSnapWindowManager::OnSnapSwitch(bool bPressed)
 {
 	CPoint ptCurrent;
 	GetCursorPos(&ptCurrent);
-	OnMoving(ptCurrent);
+	if (m_bIsMoving)
+	{
+		OnMoving(ptCurrent);
+	}
 }
 
 enum
@@ -1401,16 +1422,18 @@ void CSnapWindowManager::KillTimer(UINT_PTR nID)
 
 void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 {
-	m_nNCHittestRes = (int)msg.wp;
 	bool bShowDivider = false;
-	switch (msg.wp)
+	if (!CheckSnapSwitch())
 	{
-	case HTLEFT:
-	case HTTOP:
-	case HTRIGHT:
-	case HTBOTTOM:
-		bShowDivider = true;
-		break;
+		switch (msg.wp)
+		{
+		case HTLEFT:
+		case HTTOP:
+		case HTRIGHT:
+		case HTBOTTOM:
+			bShowDivider = true;
+			break;
+		}
 	}
 	if (bShowDivider)
 	{
@@ -1439,7 +1462,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 	DivideWindowsHelper helper;
 	helper.m_pManager = this;
 	helper.m_pCurWnd = msg.pHelper->GetWnd();
-	helper.m_nNCHittestRes = m_nNCHittestRes;
+	helper.m_nNCHittestRes = (int)msg.wp;
 	helper.InitChildWndInfosForDivider();
 
 	if (helper.m_nStickedChildCount < 2)
@@ -1459,6 +1482,7 @@ void CSnapWindowManager::CheckShowGhostDivider(SnapWndMsg& msg)
 	m_div.valid = true;
 
 	m_nActiveDivideWndIdx = helper.m_nCurWndIndex;
+	m_nNCHittestRes = helper.m_nNCHittestRes;
 
 	CGhostDividerWnd* pWnd = nullptr;
 
