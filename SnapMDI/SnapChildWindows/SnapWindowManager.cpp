@@ -1411,6 +1411,11 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 	grid.rect.right		= vx[nXMax];
 	grid.rect.bottom	= vy[ny+1];
 
+	const LONG nMinLimit = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, m_curSnapWndMinMax.ptMinTrackSize.y);
+	if (grid.rect.Width() < nMinLimit
+		|| grid.rect.Height() < nMinLimit)
+		return grid;
+
 	grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Slot);
 	return grid;
 }

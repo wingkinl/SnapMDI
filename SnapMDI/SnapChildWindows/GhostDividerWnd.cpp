@@ -23,6 +23,7 @@ BOOL CGhostDividerRenderImpAlpha::HandlePaint()
 
 	CRect rect;
 	m_pWnd->GetClientRect(rect);
+	rect.InflateRect(1, 1);
 
 	COLORREF crfFill = RGB(45, 100, 63);
 
