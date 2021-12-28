@@ -243,10 +243,6 @@ void DivideWindowsHelper::InitChildWndInfosForDivider()
 {
 	m_bVertical = m_nNCHittestRes == HTLEFT || m_nNCHittestRes == HTRIGHT;
 	auto pWndOwner = GetOwnerWnd();
-	auto& rcOwner = GetOwnerRect();
-
-	pWndOwner->GetClientRect(&rcOwner);
-	pWndOwner->ClientToScreen(&rcOwner);
 
 	CRect rcCurChild;
 	m_pCurWnd->GetWindowRect(&rcCurChild);
@@ -1204,6 +1200,9 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 		grid.type = SnapGridType::Right;
 		grid.rect.left += szGrid.cx;
 	}
+
+	const LONG nLeftRightTestArea = m_rcOwner.Width() / 3;
+
 	if (pt.y < grid.rect.top + s_nHotRgnSize)
 	{
 		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Top);
@@ -1216,6 +1215,19 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 	}
 	if (grid.type != SnapGridType::None)
 	{
+		if ( !((DWORD)grid.type & ((DWORD)SnapGridType::Left | (DWORD)SnapGridType::Right)) )
+		{
+			if (pt.x < grid.rect.left + nLeftRightTestArea)
+			{
+				grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Left);
+				grid.rect.right = grid.rect.left + szGrid.cx;
+			}
+			else if (pt.x > grid.rect.right - nLeftRightTestArea)
+			{
+				grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Right);
+				grid.rect.left += szGrid.cx;
+			}
+		}
 		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Owner);
 	}
 	return grid;
