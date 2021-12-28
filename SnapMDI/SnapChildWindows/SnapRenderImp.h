@@ -17,7 +17,7 @@ public:
 
 	void OnAnimationUpdate() override;
 
-	void PaintSnapRect(ID2D1DeviceContext* pDC, const CRect& rect);
+	void PaintSnapRect(ID2D1DeviceContext* pDC, const CRect& rect, const SnapVisualSettings* pSettings = nullptr);
 protected:
 	virtual void GetVisualSettings(SnapVisualSettings& settings) const;
 protected:
@@ -27,7 +27,7 @@ protected:
 class CSnapRenderImpBaseAlpha : public CLayeredAnimationWndRenderImpAlpha
 {
 public:
-	void PaintSnapRect(Gdiplus::Graphics& gg, CRect rect);
+	void PaintSnapRect(Gdiplus::Graphics& gg, CRect rect, const SnapVisualSettings* pSettings = nullptr);
 protected:
 	virtual void GetVisualSettings(SnapVisualSettings& settings) const;
 };

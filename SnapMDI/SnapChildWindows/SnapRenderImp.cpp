@@ -24,7 +24,7 @@ void CSnapRenderImpBaseDirectComposition::OnAnimationUpdate()
 	m_pWnd->RedrawWindow();
 }
 
-void CSnapRenderImpBaseDirectComposition::PaintSnapRect(ID2D1DeviceContext* pDC, const CRect& rect)
+void CSnapRenderImpBaseDirectComposition::PaintSnapRect(ID2D1DeviceContext* pDC, const CRect& rect, const SnapVisualSettings* pSettings)
 {
 	D2D_RECT_F rectd2;
 	rectd2.left = DPtoLP(rect.left, m_dpi.x);
@@ -41,7 +41,10 @@ void CSnapRenderImpBaseDirectComposition::PaintSnapRect(ID2D1DeviceContext* pDC,
 	rRect.radiusY = 10;
 
 	SnapVisualSettings settings;
-	GetVisualSettings(settings);
+	if (pSettings)
+		settings = *pSettings;
+	else
+		GetVisualSettings(settings);
 
 	m_brush->SetColor(settings.edge);
 	//pDC->FillRectangle(rect, m_brush.Get());
@@ -65,10 +68,13 @@ void CSnapRenderImpBaseDirectComposition::GetVisualSettings(SnapVisualSettings& 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect)
+void CSnapRenderImpBaseAlpha::PaintSnapRect(Gdiplus::Graphics& gg, CRect rect, const SnapVisualSettings* pSettings)
 {
 	SnapVisualSettings settings;
-	GetVisualSettings(settings);
+	if (pSettings)
+		settings = *pSettings;
+	else
+		GetVisualSettings(settings);
 
 	Gdiplus::Color colorEdge((BYTE)(settings.edge.a * 255), 
 		(BYTE)(settings.edge.r * 255), 

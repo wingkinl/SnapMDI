@@ -5,6 +5,8 @@
 
 namespace SnapChildWindows {
 
+constexpr D2D1_COLOR_F SecondaryFillColor = { 0.87f, 0.26f, 0.56f, 0.58f };
+
 class CSnapPreviewRenderImpDirectComposition : public CSnapRenderImpBaseDirectComposition
 {
 public:
@@ -12,6 +14,17 @@ public:
 	{
 		GetRect(m_rect, RectType::CurTarget);
 		m_pWnd->ScreenToClient(&m_rect);
+
+		auto pWnd = (CSnapPreviewWnd*)m_pWnd;
+		if (pWnd->IsShowSecondary())
+		{
+			m_rectSecond = pWnd->GetSecondaryRect();
+			m_pWnd->ScreenToClient(&m_rectSecond);
+		}
+		else
+		{
+			m_rectSecond.SetRectEmpty();
+		}
 
 		__super::OnAnimationUpdate();
 	}
@@ -38,6 +51,14 @@ public:
 
 			PaintSnapRect(dc.Get(), m_rect);
 
+			if (!m_rectSecond.IsRectEmpty())
+			{
+				SnapVisualSettings settings;
+				GetVisualSettings(settings);
+				settings.fill = SecondaryFillColor;
+				PaintSnapRect(dc.Get(), m_rectSecond, &settings);
+			}
+
 			HR(m_surface->EndDraw());
 			HR(m_device->Commit());
 			m_pWnd->ValidateRect(nullptr);
@@ -50,6 +71,7 @@ public:
 	}
 private:
 	CRect	m_rect;
+	CRect	m_rectSecond;
 };
 
 class CSnapPreviewRenderImpAlpha : public CSnapRenderImpBaseAlpha
@@ -80,6 +102,19 @@ public:
 		{
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
 			PaintSnapRect(gg, rect);
+
+			auto pWnd = (CSnapPreviewWnd*)m_pWnd;
+			if (pWnd->IsShowSecondary())
+			{
+				CRect rectSecond;
+				rectSecond = pWnd->GetSecondaryRect();
+				m_pWnd->ScreenToClient(&rectSecond);
+
+				SnapVisualSettings settings;
+				GetVisualSettings(settings);
+				settings.fill = SecondaryFillColor;
+				PaintSnapRect(gg, rectSecond, &settings);
+			}
 		}
 
 		BLENDFUNCTION bf;
@@ -136,11 +171,11 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
-		{
-			m_renderImp = std::make_shared<CSnapPreviewRenderImpDirectComposition>();
-			break;
-		}
+		//if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
+		//{
+		//	m_renderImp = std::make_shared<CSnapPreviewRenderImpDirectComposition>();
+		//	break;
+		//}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
 		if (CLayeredAnimationWndRenderImpAlpha::IsApplicable())
@@ -185,20 +220,20 @@ void CSnapPreviewWnd::StopSnapping()
 
 void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 {
-	m_rectTo = rect;
-	GetWindowInOwnerRect(m_rectTo);
+	m_rcTo = rect;
+	GetWindowInOwnerRect(m_rcTo);
 	ASSERT(!m_pActiveSnapWnd || m_pActiveSnapWnd == pActiveSnapWnd);
 	m_pActiveSnapWnd = pActiveSnapWnd;
 	if (ShouldDoAnimation())
 	{
 		if (IsWindowVisible())
 		{
-			m_rectFrom = m_rectCur;
+			m_rcFrom = m_rcCur;
 		}
 		else
 		{
-			GetWindowInOwnerRect(m_rectFrom, pActiveSnapWnd);
-			m_rectCur = m_rectFrom;
+			GetWindowInOwnerRect(m_rcFrom, pActiveSnapWnd);
+			m_rcCur = m_rcFrom;
 		}
 		m_aniStage = AnimateStage::Showing;
 		ScheduleAnimation();
@@ -207,7 +242,7 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 	{
 		if (m_renderImp)
 		{
-			m_rectCur = rect;
+			m_rcCur = rect;
 			m_renderImp->OnAnimationUpdate();
 		}
 	}
@@ -223,7 +258,13 @@ void CSnapPreviewWnd::Hide()
 	if (ShouldDoAnimation())
 	{
 		m_aniStage = AnimateStage::Hiding;
-		m_rectFrom = m_rectCur;
+		m_rcFrom = m_rcCur;
+
+		if (m_bShowSecondary)
+		{
+			std::swap(m_rcSecondaryFrom, m_rcSecondaryTo);
+		}
+
 		ScheduleAnimation();
 	}
 	else
@@ -234,9 +275,15 @@ void CSnapPreviewWnd::Hide()
 	}
 }
 
-void CSnapPreviewWnd::OnAnimationTo(const CRect& rect, bool bFinish)
+void CSnapPreviewWnd::SetSecondaryRects(const RECT& rcFrom, const RECT& rcTo)
 {
-	m_rectCur = rect;
+	m_rcSecondaryCur = rcFrom;
+	m_rcSecondaryFrom = rcFrom;
+	m_rcSecondaryTo = rcTo;
+}
+
+void CSnapPreviewWnd::UpdateAnimation(bool bFinish)
+{
 	if (m_renderImp)
 	{
 		m_renderImp->OnAnimationUpdate();
@@ -255,21 +302,24 @@ void CSnapPreviewWnd::OnAnimationTimer(double timeDiff)
 {
 	if (m_aniStage == AnimateStage::Hiding)
 	{
-		GetWindowInOwnerRect(m_rectTo, m_pActiveSnapWnd);
+		GetWindowInOwnerRect(m_rcTo, m_pActiveSnapWnd);
 	}
 
-	CRect rect;
 	bool bFinish = timeDiff >= AnimationDuration;
 	if (bFinish)
 	{
-		rect = m_rectTo;
+		m_rcCur = m_rcTo;
+		m_rcSecondaryCur = m_rcSecondaryTo;
 	}
 	else
 	{
 		auto dPos = timeDiff / AnimationDuration;
-		rect = AnimateRect(dPos, m_rectFrom, m_rectTo);
+		m_rcCur = AnimateRect(dPos, m_rcFrom, m_rcTo);
+		if (m_bShowSecondary)
+			m_rcSecondaryCur = AnimateRect(dPos, m_rcSecondaryFrom, m_rcSecondaryTo);
 	}
-	OnAnimationTo(rect, bFinish);
+
+	UpdateAnimation(bFinish);
 }
 
 

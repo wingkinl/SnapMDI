@@ -1121,6 +1121,15 @@ void CSnapWindowManager::OnMoving(CPoint pt)
 		}
 		else
 		{
+			SnapWindowGridPos grids;
+			GetAdditionalSnapWindowGridPosResult(grids);
+			// Don't need to support showing more than 1 (I guess?)
+			bool bShowSecondary = grids.wnds.size() == 1;
+			m_wndSnapPreview->SetShowSecondary(bShowSecondary);
+			if (bShowSecondary)
+			{
+				m_wndSnapPreview->SetSecondaryRects(grid.childInfo.rect, grids.wnds[0].rect);
+			}
 			m_wndSnapPreview->ShowAt(m_pCurSnapWnd->GetWnd(), grid.rect);
 		}
 	}
