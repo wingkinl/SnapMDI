@@ -528,6 +528,7 @@ void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
 	g_hGetMessageHook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgHookProc, (HINSTANCE)nullptr, GetCurrentThreadId());
 	m_snapTarget = SnapTargetTypeUnknown;
 	g_bHasLButtonUpDuringSizeMove = FALSE;
+	msg.pHelper->GetWnd()->GetWindowRect(&m_rcCurSnapWndStart);
 	GetCursorPos(&m_ptStart);
 }
 
@@ -759,26 +760,39 @@ void CSnapWindowManager::GetSnapWindowGridPosResult(SnapWindowGridPos& grids) co
 	wnd.rect = m_curGrid.rect;
 	grids.wnds.emplace_back(wnd);
 
+	GetAdditionalSnapWindowGridPosResult(grids);
+}
+
+void CSnapWindowManager::GetAdditionalSnapWindowGridPosResult(SnapWindowGridPos& grids) const
+{
 	if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::Child)
 	{
 		ASSERT(!m_vChildRects.empty());
+		WindowPos wnd = { 0 };
 		wnd.hWnd = m_curGrid.childInfo.hWndChild;
-		wnd.rect = m_curGrid.childInfo.rect;
 		wnd.flags = SWP_NOZORDER | SWP_NOACTIVATE;
-		switch ((SnapGridType)((DWORD)m_curGrid.type & SnapGridSideMask))
+		if (CheckSnapSwapWndsSwitch())
 		{
-		case SnapGridType::Left:
-			wnd.rect.left = m_curGrid.rect.right;
-			break;
-		case SnapGridType::Top:
-			wnd.rect.top = m_curGrid.rect.bottom;
-			break;
-		case SnapGridType::Right:
-			wnd.rect.right = m_curGrid.rect.left;
-			break;
-		case SnapGridType::Bottom:
-			wnd.rect.bottom = m_curGrid.rect.top;
-			break;
+			wnd.rect = m_rcCurSnapWndStart;
+		}
+		else
+		{
+			wnd.rect = m_curGrid.childInfo.rect;
+			switch ((SnapGridType)((DWORD)m_curGrid.type & SnapGridSideMask))
+			{
+			case SnapGridType::Left:
+				wnd.rect.left = m_curGrid.rect.right;
+				break;
+			case SnapGridType::Top:
+				wnd.rect.top = m_curGrid.rect.bottom;
+				break;
+			case SnapGridType::Right:
+				wnd.rect.right = m_curGrid.rect.left;
+				break;
+			case SnapGridType::Bottom:
+				wnd.rect.bottom = m_curGrid.rect.top;
+				break;
+			}
 		}
 		grids.wnds.emplace_back(wnd);
 	}
@@ -1101,14 +1115,13 @@ void CSnapWindowManager::OnMoving(CPoint pt)
 	if (m_curGrid.type != grid.type || !m_curGrid.rect.EqualRect(&grid.rect))
 	{
 		m_curGrid = grid;
-		switch ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask))
+		if ((SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask) == SnapTargetType::None)
 		{
-		case SnapTargetType::None:
 			m_wndSnapPreview->Hide();
-			break;
-		default:
+		}
+		else
+		{
 			m_wndSnapPreview->ShowAt(m_pCurSnapWnd->GetWnd(), grid.rect);
-			break;
 		}
 	}
 }
@@ -1173,7 +1186,7 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 
 BOOL CSnapWindowManager::CanDoSnapping(SnapTargetType target) const
 {
-	bool bSwitch = CheckSnapSwitch();
+	bool bSwitch = CheckSnapOnOffSwitch();
 	bool bReverse = target == SnapTargetType::Slot;
 	return !(bSwitch ^ bReverse);
 }
@@ -1277,35 +1290,42 @@ auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& c
 	SnapGridInfo grid = { (SnapGridType)SnapTargetType::None, m_rcOwner };
 	grid.rect = childInfo.rect;
 	grid.childInfo = childInfo;
-	CSize szGrid = grid.rect.Size();
-	szGrid.cx /= 2;
-	szGrid.cy /= 2;
-	szGrid.cx = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, szGrid.cx);
-	szGrid.cy = std::max(m_curSnapWndMinMax.ptMinTrackSize.y, szGrid.cy);
-	auto halfGridCx = szGrid.cx / 2;
-	if (pt.x < grid.rect.left + halfGridCx)
+	if (CheckSnapSwapWndsSwitch())
 	{
-		grid.type = SnapGridType::Left;
-		grid.rect.right = grid.rect.left + szGrid.cx;
-	}
-	else if (pt.x > grid.rect.right - halfGridCx)
-	{
-		grid.type = SnapGridType::Right;
-		grid.rect.left = grid.rect.right - szGrid.cx;
-	}
-	else if (pt.y < grid.rect.top + szGrid.cy)
-	{
-		grid.type = SnapGridType::Top;
-		grid.rect.bottom = grid.rect.top + szGrid.cy;
+		grid.type = SnapGridType::Child;
 	}
 	else
 	{
-		grid.type = SnapGridType::Bottom;
-		grid.rect.top = grid.rect.bottom - szGrid.cy;
-	}
-	if (grid.type != SnapGridType::None)
-	{
-		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Child);
+		CSize szGrid = grid.rect.Size();
+		szGrid.cx /= 2;
+		szGrid.cy /= 2;
+		szGrid.cx = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, szGrid.cx);
+		szGrid.cy = std::max(m_curSnapWndMinMax.ptMinTrackSize.y, szGrid.cy);
+		auto halfGridCx = szGrid.cx / 2;
+		if (pt.x < grid.rect.left + halfGridCx)
+		{
+			grid.type = SnapGridType::Left;
+			grid.rect.right = grid.rect.left + szGrid.cx;
+		}
+		else if (pt.x > grid.rect.right - halfGridCx)
+		{
+			grid.type = SnapGridType::Right;
+			grid.rect.left = grid.rect.right - szGrid.cx;
+		}
+		else if (pt.y < grid.rect.top + szGrid.cy)
+		{
+			grid.type = SnapGridType::Top;
+			grid.rect.bottom = grid.rect.top + szGrid.cy;
+		}
+		else
+		{
+			grid.type = SnapGridType::Bottom;
+			grid.rect.top = grid.rect.bottom - szGrid.cy;
+		}
+		if (grid.type != SnapGridType::None)
+		{
+			grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Child);
+		}
 	}
 	return grid;
 }
@@ -1452,20 +1472,21 @@ bool CSnapWindowManager::ShouldIncludeWindow(CWnd* pChildWnd) const
 	return pChildWnd->IsWindowVisible() && !pChildWnd->IsIconic();
 }
 
-void CSnapWindowManager::OnSnapSwitch(bool bPressed)
+void CSnapWindowManager::OnSnapOnOffSwitch()
 {
-	CPoint ptCurrent;
-	GetCursorPos(&ptCurrent);
 	if (m_bIsMoving)
 	{
+		CPoint ptCurrent;
+		GetCursorPos(&ptCurrent);
 		OnMoving(ptCurrent);
 	}
 }
 
 enum
 {
-	SnapSwitchCheckInterval = 100,
-	SnapSWitchVirtualkey	= VK_SHIFT,
+	SnapSwitchCheckInterval			= 100,
+	SnapOnOffSwitchVirtualkey		= VK_SHIFT,
+	SnapSwapWndsSwitchVirtualkey	= VK_MENU,
 };
 
 void CSnapWindowManager::EnableSnapSwitchCheck(bool bEnable)
@@ -1475,7 +1496,8 @@ void CSnapWindowManager::EnableSnapSwitchCheck(bool bEnable)
 		if (!m_nTimerIDSnapSwitch)
 		{
 			m_nTimerIDSnapSwitch = SetTimer(0, SnapSwitchCheckInterval);
-			m_bSwitchPressed = CheckSnapSwitch();
+			m_bOnOffSwitchPressed = CheckSnapOnOffSwitch();
+			m_bSwapWndsSwitchPressed = CheckSnapSwapWndsSwitch();
 		}
 	}
 	else if (m_nTimerIDSnapSwitch)
@@ -1485,9 +1507,15 @@ void CSnapWindowManager::EnableSnapSwitchCheck(bool bEnable)
 	}
 }
 
-bool CSnapWindowManager::CheckSnapSwitch() const
+bool CSnapWindowManager::CheckSnapOnOffSwitch() const
 {
-	bool bPressed = GetAsyncKeyState(SnapSWitchVirtualkey) < 0;
+	bool bPressed = GetAsyncKeyState(SnapOnOffSwitchVirtualkey) < 0;
+	return bPressed;
+}
+
+bool CSnapWindowManager::CheckSnapSwapWndsSwitch() const
+{
+	bool bPressed = GetAsyncKeyState(SnapSwapWndsSwitchVirtualkey) < 0;
 	return bPressed;
 }
 
@@ -1504,11 +1532,14 @@ void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 {
 	if (nIDEvent == m_nTimerIDSnapSwitch)
 	{
-		bool bSwitchKeyPressed = CheckSnapSwitch();
-		if (bSwitchKeyPressed ^ m_bSwitchPressed)
+		bool bSnapOnOffSwitch = CheckSnapOnOffSwitch();
+		bool bSwapWndsSwitch = CheckSnapSwapWndsSwitch();
+		bool bDoSwitching = (bSnapOnOffSwitch ^ m_bOnOffSwitchPressed) || (bSwapWndsSwitch ^ m_bSwapWndsSwitchPressed);
+		if (bDoSwitching)
 		{
-			OnSnapSwitch(bSwitchKeyPressed);
-			m_bSwitchPressed = bSwitchKeyPressed;
+			OnSnapOnOffSwitch();
+			m_bOnOffSwitchPressed = bSnapOnOffSwitch;
+			m_bSwapWndsSwitchPressed = bSwapWndsSwitch;
 		}
 	}
 }
@@ -1531,7 +1562,7 @@ void CSnapWindowManager::KillTimer(UINT_PTR nID)
 void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 {
 	bool bShowDivider = false;
-	if (!CheckSnapSwitch())
+	if (!CheckSnapOnOffSwitch())
 	{
 		switch (msg.wp)
 		{

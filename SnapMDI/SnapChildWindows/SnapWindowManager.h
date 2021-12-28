@@ -63,8 +63,6 @@ public:
 public:
 	void InitSnap(CWnd* pWndOwner);
 
-	virtual void OnSnapSwitch(bool bPressed);
-
 	inline bool IsEnabled() const { return m_bEnable; }
 	void Enable(bool val) { m_bEnable = val; }
 
@@ -110,11 +108,15 @@ protected:
 
 	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
 
+	virtual void OnSnapOnOffSwitch();
+
 	virtual void OnSnapToCurGrid();
 
 	virtual bool ShouldDoAnimationToSnapCurGrid() const;
 
 	virtual void GetSnapWindowGridPosResult(SnapWindowGridPos& grids) const;
+
+	virtual void GetAdditionalSnapWindowGridPosResult(SnapWindowGridPos& grids) const;
 
 	void SnapWindowsToGridResult(const SnapWindowGridPos& grids);
 
@@ -197,7 +199,9 @@ private:
 
 	void EnableSnapSwitchCheck(bool bEnable);
 
-	virtual bool CheckSnapSwitch() const;
+	virtual bool CheckSnapOnOffSwitch() const;
+
+	virtual bool CheckSnapSwapWndsSwitch() const;
 
 	static void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
@@ -239,6 +243,8 @@ protected:
 
 	CSnapWindowHelper*	m_pCurSnapWnd = nullptr;
 	MINMAXINFO			m_curSnapWndMinMax = { 0 };
+	// In screen coordinates
+	RECT				m_rcCurSnapWndStart = { 0 };
 	POINT				m_ptStart = { 0 };
 	BOOL				m_bEnterSizeMove = FALSE;
 	BOOL				m_bIsMoving = FALSE;
@@ -284,7 +290,8 @@ protected:
 	friend struct DivideWindowsHelper;
 
 	UINT_PTR	m_nTimerIDSnapSwitch = 0;
-	bool		m_bSwitchPressed = false;
+	bool		m_bOnOffSwitchPressed = false;
+	bool		m_bSwapWndsSwitchPressed = false;
 
 	int			m_nNCHittestRes = HTNOWHERE;
 
