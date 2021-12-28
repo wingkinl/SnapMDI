@@ -74,9 +74,9 @@ public:
 		return std::abs(p1 - p2) <= m_nTolerance;
 	}
 
-	static bool ShouldIncludeWindow(CWnd* pChildWnd)
+	inline bool ShouldIncludeWindow(CWnd* pChildWnd) const
 	{
-		return pChildWnd->IsWindowVisible() && !pChildWnd->IsIconic();
+		return m_pManager->ShouldIncludeWindow(pChildWnd);
 	}
 };
 
@@ -1433,6 +1433,11 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 
 	grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Slot);
 	return grid;
+}
+
+bool CSnapWindowManager::ShouldIncludeWindow(CWnd* pChildWnd) const
+{
+	return pChildWnd->IsWindowVisible() && !pChildWnd->IsIconic();
 }
 
 void CSnapWindowManager::OnSnapSwitch(bool bPressed)

@@ -190,6 +190,8 @@ protected:
 	virtual SnapGridInfo GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const;
 
 	virtual SnapGridInfo GetSnapEmptySlotGridInfo(CPoint pt) const;
+
+	virtual bool ShouldIncludeWindow(CWnd* pChildWnd) const;
 private:
 	void PreSnapInitialize();
 
