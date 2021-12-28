@@ -484,17 +484,6 @@ BOOL CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 		if (m_bEnterSizeMove)
 			HandleSizing(msg);
 		break;
-	case WM_CHILDACTIVATE:
-		if (m_bEnterSizeMove)
-			m_bCheckMoveAbortion = TRUE;
-		break;
-	case WM_MOVE:
-	case WM_SIZE:
-		// Whiling dragging the window around, users can press ESC to abort.
-		// It seems that WM_MOVE after WM_CHILDACTIVATE indicates a restoration of window position
-		if (m_bCheckMoveAbortion)
-			m_bAborted = TRUE;
-		break;
 	case WM_NCMOUSEMOVE:
 		HandleNCMouseMove(msg);
 		break;
@@ -503,6 +492,27 @@ BOOL CSnapWindowManager::PreWndMsg(SnapWndMsg& msg)
 		break;
 	}
 	return FALSE;
+}
+
+static HHOOK g_hGetMessageHook = nullptr;
+static BOOL g_bHasLButtonUpDuringSizeMove = FALSE;
+
+LRESULT CALLBACK GetMsgHookProc(int code, WPARAM wParam, LPARAM lParam)
+{
+	if (code == HC_ACTION)
+	{
+		auto pMsg = (MSG*)lParam;
+		// Whiling dragging the window around, users can press ESC to abort.
+		// It seems that there is no way of telling if that happens (since
+		// there is no WM_KEYDOWN messages), WM_LBUTTONUP is posted to the
+		// message queue instead of directly sent to the window (PreWndMsg
+		// won't be able to catch it. So we have to rely on this.
+		if (pMsg->message == WM_LBUTTONUP)
+		{
+			g_bHasLButtonUpDuringSizeMove = TRUE;
+		}
+	}
+	return CallNextHookEx(g_hGetMessageHook, code, wParam, lParam);
 }
 
 void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
@@ -515,33 +525,38 @@ void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
 	else
 	{
 		m_bEnterSizeMove = EnterSnapping(msg);
-		if (!m_bEnterSizeMove)
-			return;
-		m_snapTarget = SnapTargetTypeUnknown;
 	}
-
-	m_bCheckMoveAbortion = FALSE;
-	m_bAborted = FALSE;
+	if (!m_bEnterSizeMove)
+		return;
+	ASSERT(!g_hGetMessageHook);
+	g_hGetMessageHook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgHookProc, (HINSTANCE)nullptr, GetCurrentThreadId());
+	m_snapTarget = SnapTargetTypeUnknown;
+	g_bHasLButtonUpDuringSizeMove = FALSE;
 	GetCursorPos(&m_ptStart);
 }
 
 void CSnapWindowManager::HandleExitSizeMove(SnapWndMsg& msg)
 {
 	ASSERT(m_bEnterSizeMove);
+	BOOL bAborted = !g_bHasLButtonUpDuringSizeMove;
 	if (m_bIsMoving)
 	{
 		ASSERT(msg.pHelper == m_pCurSnapWnd);
-		StopMoving(m_bAborted);
+		StopMoving(bAborted);
 		m_bIsMoving = FALSE;
 	}
 	else if (m_bDividing)
 	{
-		StopDividing(m_bAborted);
+		StopDividing(bAborted);
 		m_bDividing = FALSE;
 	}
 	m_snapTarget = SnapTargetType::None;
 	m_bEnterSizeMove = FALSE;
 	m_pCurSnapWnd = nullptr;
+
+	ASSERT(g_hGetMessageHook);
+	UnhookWindowsHookEx(g_hGetMessageHook);
+	g_hGetMessageHook = nullptr;
 }
 
 void CSnapWindowManager::HandleMoving(SnapWndMsg& msg)
