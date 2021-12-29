@@ -448,7 +448,11 @@ CSnapWindowManager::CSnapWindowManager()
 
 CSnapWindowManager::~CSnapWindowManager()
 {
-
+	for (auto& wi : m_vGhostDividerWnds)
+	{
+		wi.wnd->DestroyWindow();
+		delete wi.wnd;
+	}
 }
 
 CSnapWindowManager::TimerMap CSnapWindowManager::s_mapTimers;
@@ -1688,6 +1692,7 @@ void CSnapWindowManager::OnGhostDividerWndHidden(CGhostDividerWnd* pWnd)
 	if (it != m_vGhostDividerWnds.end())
 	{
 		it->wnd->DestroyWindow();
+		delete it->wnd;
 		m_vGhostDividerWnds.erase(it);
 	}
 	else
