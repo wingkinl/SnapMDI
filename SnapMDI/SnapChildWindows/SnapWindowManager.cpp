@@ -201,8 +201,8 @@ void SnapWindowsHelper::CheckSnapableWindows()
 	 			auto& wnd2 = wnds[jj];
 	 			auto& wi1 = m_vChildRects[wnd1.rectIdx];
 	 			auto& wi2 = m_vChildRects[wnd2.rectIdx];
-				if (wi1.bAdjacentToOwner || wi1.bAdjacentToSibling
-					|| wi2.bAdjacentToOwner || wi2.bAdjacentToSibling)
+				if ( (wi1.bAdjacentToOwner || wi1.bAdjacentToSibling)
+					&& (wi2.bAdjacentToOwner || wi2.bAdjacentToSibling))
 					continue;
 	 			auto v1Max = *(LONG*)((BYTE*)&wi1.rect + divMaxOff);
 	 			auto v2Min = *(LONG*)((BYTE*)&wi2.rect + divMinOff);
