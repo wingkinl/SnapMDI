@@ -702,7 +702,6 @@ void CSnapWindowManager::OnSnapToCurGrid()
 	SnapWindowGridPos grids;
 	GetSnapWindowGridPosResult(grids);
 	bool bSnapNow = true;
-#if 1
 	if (IsAnimationEnabled() && ShouldDoAnimationToSnapCurGrid())
 	{
 		auto pWnd = GetSnapAssistWnd();
@@ -712,12 +711,10 @@ void CSnapWindowManager::OnSnapToCurGrid()
 			std::swap(pWnd->m_data.initSnapGridWnds.wndPos, grids);
 		}
 	}
-#endif
 	if (bSnapNow)
 	{
 		SnapWindowsToGridResult(grids);
 	}
-#if 1
 	SnapLayoutWindows layout;
 	if (IsSnapAssistEnabled())
 	{
@@ -736,7 +733,6 @@ void CSnapWindowManager::OnSnapToCurGrid()
 	}
 	if (!bSnapNow || !layout.wnds.empty())
 		ShowSnapAssist(std::move(layout));
-#endif
 }
 
 bool CSnapWindowManager::ShouldDoAnimationToSnapCurGrid() const
@@ -1471,10 +1467,10 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 	grid.rect.right		= vx[nXMax];
 	grid.rect.bottom	= vy[ny+1];
 
-	const LONG nMinLimit = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, m_curSnapWndMinMax.ptMinTrackSize.y);
-	if (grid.rect.Width() < nMinLimit
-		|| grid.rect.Height() < nMinLimit)
-		return grid;
+	if (grid.rect.Width() < m_curSnapWndMinMax.ptMinTrackSize.x)
+		grid.rect.right = grid.rect.left + m_curSnapWndMinMax.ptMinTrackSize.x;
+	if (grid.rect.Height() < m_curSnapWndMinMax.ptMinTrackSize.y)
+		grid.rect.bottom = grid.rect.top + m_curSnapWndMinMax.ptMinTrackSize.y;
 
 	grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapTargetType::Slot);
 	return grid;
