@@ -114,6 +114,10 @@ void CGhostDividerWnd::Show()
 		m_aniStage = AnimateStage::Showing;
 		ScheduleAnimation();
 	}
+	else
+	{
+		SetLayeredWindowAttributes(0, 255, LWA_ALPHA);
+	}
 }
 
 void CGhostDividerWnd::Hide()

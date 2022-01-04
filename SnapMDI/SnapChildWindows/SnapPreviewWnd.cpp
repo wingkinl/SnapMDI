@@ -243,6 +243,7 @@ void CSnapPreviewWnd::ShowAt(CWnd* pActiveSnapWnd, const CRect& rect)
 		if (m_renderImp)
 		{
 			m_rcCur = rect;
+			m_rcSecondaryCur = m_rcSecondaryTo;
 			m_renderImp->OnAnimationUpdate();
 		}
 	}
