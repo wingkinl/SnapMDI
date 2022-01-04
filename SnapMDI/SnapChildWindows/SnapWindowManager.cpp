@@ -12,7 +12,7 @@
 namespace SnapChildWindows
 {
 
-static int s_nHotRgnSize = -1;
+static int s_nOwnerEdgeDist = -1;
 
 #define SnapTargetTypeUnknown (CSnapWindowManager::SnapTargetType)0xff
 
@@ -643,9 +643,9 @@ void CSnapWindowManager::HandleSizing(SnapWndMsg& msg)
 
 void CSnapWindowManager::PreSnapInitialize()
 {
-	if (s_nHotRgnSize < 0)
+	if (s_nOwnerEdgeDist < 0)
 	{
-		s_nHotRgnSize = GetSystemMetrics(SM_CYCAPTION);
+		s_nOwnerEdgeDist = GetSystemMetrics(SM_CXVSCROLL) / 2;
 	}
 	m_curSnapWndMinMax.ptMinTrackSize.x = GetSystemMetrics(SM_CXMINTRACK);
 	m_curSnapWndMinMax.ptMinTrackSize.y = GetSystemMetrics(SM_CYMINTRACK);
@@ -1212,12 +1212,12 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 	szGrid.cx = std::max(m_curSnapWndMinMax.ptMinTrackSize.x, szGrid.cx);
 	szGrid.cy = std::min(m_curSnapWndMinMax.ptMaxTrackSize.y, szGrid.cy);
 	szGrid.cy = std::max(m_curSnapWndMinMax.ptMinTrackSize.y, szGrid.cy);
-	if (pt.x < grid.rect.left + s_nHotRgnSize)
+	if (pt.x < grid.rect.left + s_nOwnerEdgeDist)
 	{
 		grid.type = SnapGridType::Left;
 		grid.rect.right = grid.rect.left + szGrid.cx;
 	}
-	else if (pt.x > grid.rect.right - s_nHotRgnSize)
+	else if (pt.x > grid.rect.right - s_nOwnerEdgeDist)
 	{
 		grid.type = SnapGridType::Right;
 		grid.rect.left += szGrid.cx;
@@ -1225,12 +1225,12 @@ auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
 
 	const LONG nLeftRightTestArea = m_rcOwner.Width() / 3;
 
-	if (pt.y < grid.rect.top + s_nHotRgnSize)
+	if (pt.y < grid.rect.top + s_nOwnerEdgeDist)
 	{
 		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Top);
 		grid.rect.bottom = grid.rect.top + szGrid.cy;
 	}
-	else if (pt.y > grid.rect.bottom - s_nHotRgnSize)
+	else if (pt.y > grid.rect.bottom - s_nOwnerEdgeDist)
 	{
 		grid.type = (SnapGridType)((DWORD)grid.type | (DWORD)SnapGridType::Bottom);
 		grid.rect.top += szGrid.cy;
@@ -1347,8 +1347,9 @@ auto CSnapWindowManager::GetSnapEmptySlotGridInfo(CPoint pt) const -> SnapGridIn
 	if (!CanDoSnapping(SnapTargetType::Slot))
 		return grid;
 
-	if ( pt.x <= m_rcOwner.left || pt.y <= m_rcOwner.top
-		|| pt.x >= m_rcOwner.right || pt.y >= m_rcOwner.bottom)
+	CRect rcAllowedArea = m_rcOwner;
+	rcAllowedArea.DeflateRect(s_nOwnerEdgeDist, s_nOwnerEdgeDist);
+	if (!rcAllowedArea.PtInRect(pt))
 		return grid;
 
 	size_t nSize = m_vChildRects.size() * 2 + 2;
