@@ -210,6 +210,7 @@ public:
 
 		{
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
+			gg.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
 
 			auto pWnd = (CSnapAssistWnd*)m_pWnd;
 			auto& data = pWnd->GetData();

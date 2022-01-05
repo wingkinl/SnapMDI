@@ -91,6 +91,7 @@ public:
 
 		{
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
+			gg.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
 
 			struct PaintParams 
 			{

@@ -101,6 +101,7 @@ public:
 
 		{
 			Gdiplus::Graphics gg(dc.GetSafeHdc());
+			gg.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
 			PaintSnapRect(gg, rect);
 
 			auto pWnd = (CSnapPreviewWnd*)m_pWnd;
@@ -171,11 +172,11 @@ void CSnapPreviewWnd::Create(CWnd* pWndOwner)
 	switch (m_tech)
 	{
 	case RenderTech::DirectComposition:
-		//if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
-		//{
-		//	m_renderImp = std::make_shared<CSnapPreviewRenderImpDirectComposition>();
-		//	break;
-		//}
+		if (CLayeredAnimationWndRenderImpDirectComposition::IsApplicable())
+		{
+			m_renderImp = std::make_shared<CSnapPreviewRenderImpDirectComposition>();
+			break;
+		}
 		// fall through
 	case RenderTech::AlphaBlendedLayer:
 		if (CLayeredAnimationWndRenderImpAlpha::IsApplicable())
