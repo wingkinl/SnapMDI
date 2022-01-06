@@ -14,7 +14,8 @@ protected: // create from serialization only
 
 // Attributes
 public:
-
+	COLORREF m_crfBackground;
+	BOOL	m_bTestProp = TRUE;
 // Operations
 public:
 

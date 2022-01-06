@@ -23,7 +23,6 @@ public:
 	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 protected:
-	COLORREF m_crfBackground;
 // Implementation
 public:
 	virtual ~CSnapMDIView();
@@ -34,6 +33,8 @@ public:
 
 protected:
 	afx_msg BOOL OnEraseBkgnd(CDC*);
+	afx_msg void OnUpdateTestProp(CCmdUI* pCmdUI);
+	afx_msg void OnTestProp();
 // Generated message map functions
 protected:
 	DECLARE_MESSAGE_MAP()

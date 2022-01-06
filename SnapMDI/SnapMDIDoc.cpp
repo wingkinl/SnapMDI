@@ -30,8 +30,8 @@ END_MESSAGE_MAP()
 
 CSnapMDIDoc::CSnapMDIDoc() noexcept
 {
-	// TODO: add one-time construction code here
-
+	static bool once = (std::srand(GetTickCount()), true);
+	m_crfBackground = RGB((BYTE)(rand() % 255), (BYTE)(rand() % 255), (BYTE)(rand() % 255));
 }
 
 CSnapMDIDoc::~CSnapMDIDoc()

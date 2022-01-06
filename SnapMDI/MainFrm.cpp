@@ -184,7 +184,6 @@ IMPLEMENT_DYNAMIC(CMainFrame, CMainFrameBase)
 BEGIN_MESSAGE_MAP(CMainFrame, CMainFrameBase)
 	ON_WM_CREATE()
 	ON_COMMAND(ID_TEST_FLOAT, OnTestFloat)
-	ON_COMMAND(ID_TEST_SNAPPREVIEW, OnTestSnapPreview)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -273,7 +272,4 @@ void CMainFrame::OnTestFloat()
 	}
 }
 
-void CMainFrame::OnTestSnapPreview()
-{
-	
-}
+

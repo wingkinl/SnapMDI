@@ -7,7 +7,7 @@
 #define IDR_SnapMDITYPE                 130
 #define ID_WINDOW_MANAGER               131
 #define ID_TEST_FLOAT                   32771
-#define ID_TEST_SNAPPREVIEW             32772
+#define ID_TEST_PROP                    32772
 
 // Next default values for new objects
 // 
