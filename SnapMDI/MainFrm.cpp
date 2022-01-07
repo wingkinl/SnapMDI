@@ -123,7 +123,7 @@ BOOL CFloatFrame::Create(CWnd* pWndParent)
 	//}
 
 	// attempt to create the window
-	DWORD dwDefaultStyle = WS_OVERLAPPEDWINDOW;
+	DWORD dwDefaultStyle = WS_OVERLAPPEDWINDOW|WS_VISIBLE;
 	LPCTSTR lpszClass = GetIconWndClass(dwDefaultStyle, IDR_MAINFRAME);
 	m_strTitle = _T("Demo");
 	CString strTitle = m_strTitle;
@@ -134,12 +134,15 @@ BOOL CFloatFrame::Create(CWnd* pWndParent)
 	}
 
 	auto pWndClient = CWnd::FromHandle(m_hWndMDIClient);
-	pWndClient->ModifyStyleEx(WS_EX_CLIENTEDGE, 0);
+	//pWndClient->ModifyStyleEx(WS_EX_CLIENTEDGE, 0);
+	CRect rect;
+	GetClientRect(&rect);
+	pWndClient->SetWindowPos(nullptr, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
 	//SetMenu(nullptr);
 	//SendMessageToDescendants(WM_INITIALUPDATE, 0, 0, TRUE, TRUE);
 
-	ShowWindow(SW_SHOW);
-	UpdateWindow();
+	//ShowWindow(SW_SHOW);
+	//UpdateWindow();
 	return TRUE;
 }
 
@@ -171,7 +174,7 @@ void CFloatFrame::OnClose()
 	auto pMDIChild = MDIGetActive();
 	if (pMDIChild)
 	{
-		m_pMainFrame->AttachMDIChild(pMDIChild, false);
+		
 	}
 
 	CFloatFrameBase::OnClose();

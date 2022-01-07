@@ -7,7 +7,7 @@
 class CMainFrame;
 class CSnapPreviewWnd;
 
-class CFloatFrameBase : public CMDIFrameWndEx
+class CFloatFrameBase : public CMDIFrameWnd
 {
 public:
 	void AttachMDIChild(CMDIChildWnd* pWndChild, bool bMaximize = true);
@@ -32,7 +32,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 };
 
-using CMainFrameBase = CFloatFrameBase;
+using CMainFrameBase = CMDIFrameWndEx;
 
 class CMainFrame : public CMainFrameBase
 {
