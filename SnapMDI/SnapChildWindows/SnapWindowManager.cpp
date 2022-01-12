@@ -120,8 +120,6 @@ void SnapWindowsHelper::InitChildWndInfosForSnap()
 {
 	auto pWndOwner = GetOwnerWnd();
 	CWnd* pWndChild = pWndOwner->GetWindow(GW_CHILD);
-	// It is reasonable to assume that the active window must be the first child
-	ASSERT(pWndChild && pWndChild == m_pCurWnd);
 	auto& rcOwner = GetOwnerRect();
 
 	pWndOwner->GetClientRect(&rcOwner);
