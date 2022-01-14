@@ -86,7 +86,7 @@ protected:
 
 	void StopMoving(bool bAbort = false);
 
-	void OnMoving(CPoint pt);
+	virtual void OnMoving(CPoint pt);
 
 	virtual BOOL EnterSnapping(const SnapWndMsg& msg) const;
 

@@ -590,7 +590,6 @@ void CSnapWindowManager::HandleSizing(SnapWndMsg& msg)
 	ASSERT(m_bEnterSizeMove);
 	if (m_bDividing && m_wndDividePreview)
 	{
-		// TODO
 		auto& rect = *(RECT*)msg.lp;
 		LONG* pPosV = nullptr;
 		switch (m_nNCHittestRes)
