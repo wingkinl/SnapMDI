@@ -189,7 +189,7 @@ protected:
 
 	virtual SnapGridInfo GetSnapChildGridInfo(CPoint pt) const;
 
-	virtual SnapGridInfo GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const;
+	virtual SnapGridInfo GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo, bool bSwap) const;
 
 	virtual SnapGridInfo GetSnapEmptySlotGridInfo(CPoint pt) const;
 
@@ -197,11 +197,32 @@ protected:
 private:
 	void PreSnapInitialize();
 
-	void EnableSnapSwitchCheck(bool bEnable);
+	void EnableSwitchKeyCheck(bool bEnable);
 
-	virtual bool CheckSnapOnOffSwitch() const;
+	enum FeatureType
+	{
+		FeatureTypeSnapOwner,
+		FeatureTypeSnapChild,
+		FeatureTypeSnapSlot,
+		FeatureTypeSnapCustom,
+		FeatureTypeSwapWindow,
+		FeatureTypeDivider,
+		FeatureTypeSize,
+	};
+	virtual int GetFeatureSwitchKey(FeatureType type) const;
 
-	virtual bool CheckSnapSwapWndsSwitch() const;
+	bool IsFeatureSwitchEnabled(FeatureType type) const;
+
+	int m_arrSwitchKeys[FeatureTypeSize] = { 0 };
+
+	struct SwitchKeyState 
+	{
+		int vk;
+		bool bPressed;
+	};
+	std::vector<SwitchKeyState> m_vSwitchKeyStates;
+
+	virtual void CheckInit();
 
 	static void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
@@ -254,6 +275,7 @@ protected:
 	bool				m_bEnable = true;
 	bool				m_bEnableAnimation = true;
 	bool				m_bEnableSnapAssist = true;
+	bool				m_bInited = false;
 
 	// For snapping, does not include the active window
 	// Sorted by Z order, the first one is at the top of the Z order.
@@ -289,9 +311,7 @@ protected:
 
 	friend struct DivideWindowsHelper;
 
-	UINT_PTR	m_nTimerIDSnapSwitch = 0;
-	bool		m_bOnOffSwitchPressed = false;
-	bool		m_bSwapWndsSwitchPressed = false;
+	UINT_PTR	m_nTimerIDFeatureSwitchKey = 0;
 
 	int			m_nNCHittestRes = HTNOWHERE;
 

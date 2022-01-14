@@ -515,6 +515,7 @@ LRESULT CALLBACK GetMsgHookProc(int code, WPARAM wParam, LPARAM lParam)
 
 void CSnapWindowManager::HandleEnterSizeMove(SnapWndMsg& msg)
 {
+	CheckInit();
 	if (m_div.valid)
 	{
 		m_bEnterSizeMove = EnterDividing(msg);
@@ -655,7 +656,7 @@ void CSnapWindowManager::PreSnapInitialize()
 	ASSERT(m_curSnapWndMinMax.ptMinTrackSize.x <= m_curSnapWndMinMax.ptMaxTrackSize.x);
 	ASSERT(m_curSnapWndMinMax.ptMinTrackSize.y <= m_curSnapWndMinMax.ptMaxTrackSize.y);
 
-	EnableSnapSwitchCheck(true);
+	EnableSwitchKeyCheck(true);
 }
 
 void CSnapWindowManager::StartMoving(CSnapWindowHelper* pWndHelper)
@@ -680,7 +681,7 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 {
 	if (!m_wndSnapPreview)
 		return;
-	EnableSnapSwitchCheck(false);
+	EnableSwitchKeyCheck(false);
 
 	m_wndSnapPreview->StopSnapping();
 
@@ -769,7 +770,7 @@ void CSnapWindowManager::GetAdditionalSnapWindowGridPosResult(SnapWindowGridPos&
 		WindowPos wnd = { 0 };
 		wnd.hWnd = m_curGrid.childInfo.hWndChild;
 		wnd.flags = SWP_NOZORDER | SWP_NOACTIVATE;
-		if (CheckSnapSwapWndsSwitch())
+		if (IsFeatureSwitchEnabled(FeatureTypeSwapWindow))
 		{
 			wnd.rect = m_rcCurSnapWndStart;
 		}
@@ -1193,9 +1194,27 @@ auto CSnapWindowManager::GetSnapGridInfo(CPoint pt) const -> SnapGridInfo
 
 BOOL CSnapWindowManager::CanDoSnapping(SnapTargetType target) const
 {
-	bool bSwitch = CheckSnapOnOffSwitch();
-	bool bReverse = target == SnapTargetType::Slot;
-	return !(bSwitch ^ bReverse);
+	if (target == SnapTargetType::None)
+		return FALSE;
+	FeatureType feat;
+	switch (target)
+	{
+	case SnapTargetType::Owner:
+		feat = FeatureTypeSnapOwner;
+		break;
+	case SnapTargetType::Child:
+		feat = FeatureTypeSnapChild;
+		break;
+	case SnapTargetType::Slot:
+		feat = FeatureTypeSnapSlot;
+		break;
+	case SnapTargetType::Custom:
+		feat = FeatureTypeSnapCustom;
+		break;
+	default:
+		return FALSE;
+	}
+	return IsFeatureSwitchEnabled(feat);
 }
 
 auto CSnapWindowManager::GetSnapOwnerGridInfo(CPoint pt) const -> SnapGridInfo
@@ -1258,7 +1277,8 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 	SnapGridInfo grid = { SnapGridType::None, m_rcOwner };
 	if (m_vChildRects.empty())
 		return grid;
-	if (!CanDoSnapping(SnapTargetType::Child))
+	bool bSwap = IsFeatureSwitchEnabled(FeatureTypeSwapWindow);
+	if (!bSwap && !CanDoSnapping(SnapTargetType::Child))
 		return grid;
 	int nCount = (int)m_vChildRects.size();
 	for (int ii = 0; ii < nCount; ++ii)
@@ -1281,7 +1301,7 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 				}
 				if (!bOverlapped)
 				{
-					auto gridTemp = GetSnapChildGridInfoEx(pt, wnd);
+					auto gridTemp = GetSnapChildGridInfoEx(pt, wnd, bSwap);
 					if (gridTemp.type != SnapGridType::None)
 						return gridTemp;
 				}
@@ -1292,12 +1312,12 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 	return grid;
 }
 
-auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo) const -> SnapGridInfo
+auto CSnapWindowManager::GetSnapChildGridInfoEx(CPoint pt, const ChildWndInfo& childInfo, bool bSwap) const -> SnapGridInfo
 {
 	SnapGridInfo grid = { (SnapGridType)SnapTargetType::None, m_rcOwner };
 	grid.rect = childInfo.rect;
 	grid.childInfo = childInfo;
-	if (CheckSnapSwapWndsSwitch())
+	if (bSwap)
 	{
 		grid.type = SnapGridType::Child;
 	}
@@ -1493,38 +1513,82 @@ void CSnapWindowManager::OnSnapOnOffSwitch()
 enum
 {
 	SnapSwitchCheckInterval			= 100,
-	SnapOnOffSwitchVirtualkey		= VK_SHIFT,
-	SnapSwapWndsSwitchVirtualkey	= VK_MENU,
 };
 
-void CSnapWindowManager::EnableSnapSwitchCheck(bool bEnable)
+void CSnapWindowManager::EnableSwitchKeyCheck(bool bEnable)
 {
 	if (bEnable)
 	{
-		if (!m_nTimerIDSnapSwitch)
+		if (!m_nTimerIDFeatureSwitchKey && !m_vSwitchKeyStates.empty())
 		{
-			m_nTimerIDSnapSwitch = SetTimer(0, SnapSwitchCheckInterval);
-			m_bOnOffSwitchPressed = CheckSnapOnOffSwitch();
-			m_bSwapWndsSwitchPressed = CheckSnapSwapWndsSwitch();
+			m_nTimerIDFeatureSwitchKey = SetTimer(0, SnapSwitchCheckInterval);
+			for (auto& ks : m_vSwitchKeyStates)
+			{
+				ks.bPressed = GetAsyncKeyState(ks.vk) < 0;
+			}
 		}
 	}
-	else if (m_nTimerIDSnapSwitch)
+	else if (m_nTimerIDFeatureSwitchKey)
 	{
-		KillTimer(m_nTimerIDSnapSwitch);
-		m_nTimerIDSnapSwitch = 0;
+		KillTimer(m_nTimerIDFeatureSwitchKey);
+		m_nTimerIDFeatureSwitchKey = 0;
 	}
 }
 
-bool CSnapWindowManager::CheckSnapOnOffSwitch() const
+int CSnapWindowManager::GetFeatureSwitchKey(FeatureType type) const
 {
-	bool bPressed = GetAsyncKeyState(SnapOnOffSwitchVirtualkey) < 0;
-	return bPressed;
+	switch (type)
+	{
+	case FeatureTypeSnapOwner:
+		// Default On, hold Shift to disable
+		return -(int)VK_SHIFT;
+	case FeatureTypeSnapChild:
+	case FeatureTypeSnapSlot:
+	case FeatureTypeSnapCustom:
+		// Hold Shift key to snap
+		return VK_SHIFT;
+	case FeatureTypeSwapWindow:
+		// Hold Alt key to swap
+		return VK_MENU;
+	case FeatureTypeDivider:
+		// Default On, hold Shift to disable
+		return -(int)VK_SHIFT;
+	}
+	return 0;
 }
 
-bool CSnapWindowManager::CheckSnapSwapWndsSwitch() const
+bool CSnapWindowManager::IsFeatureSwitchEnabled(FeatureType type) const
 {
-	bool bPressed = GetAsyncKeyState(SnapSwapWndsSwitchVirtualkey) < 0;
-	return bPressed;
+	if (!m_arrSwitchKeys[type])
+		return true;
+	int vk = m_arrSwitchKeys[type];
+	bool bPressed = GetAsyncKeyState(std::abs(vk)) < 0;
+	return bPressed ^ (vk < 0);
+}
+
+void CSnapWindowManager::CheckInit()
+{
+	if (m_bInited)
+		return;
+	m_bInited = true;
+	m_vSwitchKeyStates.clear();
+	for (int feat = 0; feat < FeatureTypeSize; ++feat)
+	{
+		int vk = GetFeatureSwitchKey((FeatureType)feat);
+		m_arrSwitchKeys[feat] = vk;
+		// For divider, we don't support switching on the fly (must be pressed beforehand)
+		if (feat != FeatureTypeDivider)
+		{
+			vk = std::abs(vk);
+			auto it = std::find_if(m_vSwitchKeyStates.begin(), m_vSwitchKeyStates.end(), 
+				[vk](auto& ks) {return ks.vk == vk; });
+			if (it == m_vSwitchKeyStates.end())
+			{
+				SwitchKeyState ks = { vk, false };
+				m_vSwitchKeyStates.emplace_back(ks);
+			}
+		}
+	}
 }
 
 void CALLBACK CSnapWindowManager::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
@@ -1538,16 +1602,21 @@ void CALLBACK CSnapWindowManager::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEve
 
 void CSnapWindowManager::OnTimer(UINT_PTR nIDEvent, DWORD dwTime)
 {
-	if (nIDEvent == m_nTimerIDSnapSwitch)
+	if (nIDEvent == m_nTimerIDFeatureSwitchKey)
 	{
-		bool bSnapOnOffSwitch = CheckSnapOnOffSwitch();
-		bool bSwapWndsSwitch = CheckSnapSwapWndsSwitch();
-		bool bDoSwitching = (bSnapOnOffSwitch ^ m_bOnOffSwitchPressed) || (bSwapWndsSwitch ^ m_bSwapWndsSwitchPressed);
-		if (bDoSwitching)
+		bool bChanged = false;
+		for (auto& ks : m_vSwitchKeyStates)
+		{
+			bool bPressed = GetAsyncKeyState(ks.vk) < 0;
+			if (bPressed ^ ks.bPressed)
+			{
+				ks.bPressed = bPressed;
+				bChanged = true;
+			}
+		}
+		if (bChanged)
 		{
 			OnSnapOnOffSwitch();
-			m_bOnOffSwitchPressed = bSnapOnOffSwitch;
-			m_bSwapWndsSwitchPressed = bSwapWndsSwitch;
 		}
 	}
 }
@@ -1569,8 +1638,9 @@ void CSnapWindowManager::KillTimer(UINT_PTR nID)
 
 void CSnapWindowManager::HandleNCMouseMove(SnapWndMsg& msg)
 {
+	CheckInit();
 	bool bShowDivider = false;
-	if (!CheckSnapOnOffSwitch())
+	if (IsFeatureSwitchEnabled(FeatureTypeDivider))
 	{
 		switch (msg.wp)
 		{
