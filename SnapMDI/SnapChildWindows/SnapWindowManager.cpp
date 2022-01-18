@@ -687,7 +687,8 @@ void CSnapWindowManager::StopMoving(bool bAbort)
 	if (!bAbort && m_curGrid.type != SnapGridType::None)
 	{
 		auto targetType = (SnapTargetType)((DWORD)m_curGrid.type & (DWORD)SnapTargetMask);
-		if (CanDoSnapping(targetType))
+		bool bSwap = IsFeatureSwitchEnabled(FeatureTypeSwapWindow);
+		if (bSwap || CanDoSnapping(targetType))
 			OnSnapToCurGrid();
 	}
 
