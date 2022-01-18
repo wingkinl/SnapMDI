@@ -106,6 +106,8 @@ protected:
 		SnapTargetMask = 0x0f,
 	};
 
+	virtual bool ShouldCheckAdjacentStateForSnapping() const;
+
 	virtual SnapTargetType InitMovingSnap(const SnapWndMsg& msg);
 
 	virtual void OnSnapOnOffSwitch();

@@ -111,12 +111,12 @@ void AdjacentWindowsHelper::InsertWindowEdgeInfo(LONG pos, bool bVertical, size_
 //////////////////////////////////////////////////////////////////////////
 struct SnapWindowsHelper : public AdjacentWindowsHelper
 {
-	void InitChildWndInfosForSnap();
+	void InitChildWndInfosForSnap(bool bCheckAdjacentState);
 
 	void CheckSnapableWindows();
 };
 
-void SnapWindowsHelper::InitChildWndInfosForSnap()
+void SnapWindowsHelper::InitChildWndInfosForSnap(bool bCheckAdjacentState)
 {
 	auto pWndOwner = GetOwnerWnd();
 	CWnd* pWndChild = pWndOwner->GetWindow(GW_CHILD);
@@ -133,34 +133,39 @@ void SnapWindowsHelper::InitChildWndInfosForSnap()
 		if (pWndChild == m_pCurWnd || !ShouldIncludeWindow(pWndChild))
 			continue;
 		ChildWndInfo childInfo = { pWndChild->GetSafeHwnd() };
-		pWndChild->GetWindowRect(&childInfo.rect);
 		auto& rect = childInfo.rect;
-		size_t rectIdx = m_vChildRects.size();
+		pWndChild->GetWindowRect(&rect);
 
-		if (MatchPosition(rect.left, rcOwner.left))
-			childInfo.bAdjacentToOwner = true;
-		else
-			InsertWindowEdgeInfo(rect.left, true, rectIdx, true);
-
-		if (MatchPosition(rect.top, rcOwner.top))
-			childInfo.bAdjacentToOwner = true;
-		else
-			InsertWindowEdgeInfo(rect.top, false, rectIdx, true);
-
-		if (MatchPosition(rect.right, rcOwner.right))
-			childInfo.bAdjacentToOwner = true;
-		else
-			InsertWindowEdgeInfo(rect.right, true, rectIdx, false);
-
-		if (MatchPosition(rect.bottom, rcOwner.bottom))
-			childInfo.bAdjacentToOwner = true;
-		else
-			InsertWindowEdgeInfo(rect.bottom, false, rectIdx, false);
-
-		if (childInfo.bAdjacentToOwner)
+		if (bCheckAdjacentState)
 		{
-			++m_nStickToOwnerCount;
+			size_t rectIdx = m_vChildRects.size();
+
+			if (MatchPosition(rect.left, rcOwner.left))
+				childInfo.bAdjacentToOwner = true;
+			else
+				InsertWindowEdgeInfo(rect.left, true, rectIdx, true);
+
+			if (MatchPosition(rect.top, rcOwner.top))
+				childInfo.bAdjacentToOwner = true;
+			else
+				InsertWindowEdgeInfo(rect.top, false, rectIdx, true);
+
+			if (MatchPosition(rect.right, rcOwner.right))
+				childInfo.bAdjacentToOwner = true;
+			else
+				InsertWindowEdgeInfo(rect.right, true, rectIdx, false);
+
+			if (MatchPosition(rect.bottom, rcOwner.bottom))
+				childInfo.bAdjacentToOwner = true;
+			else
+				InsertWindowEdgeInfo(rect.bottom, false, rectIdx, false);
+
+			if (childInfo.bAdjacentToOwner)
+			{
+				++m_nStickToOwnerCount;
+			}
 		}
+
 		m_vChildRects.emplace_back(childInfo);
 	}
 }
@@ -1143,6 +1148,11 @@ BOOL CSnapWindowManager::EnterSnapping(const SnapWndMsg& msg) const
 	return TRUE;
 }
 
+bool CSnapWindowManager::ShouldCheckAdjacentStateForSnapping() const
+{
+	return true;
+}
+
 auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 {
 #ifdef _DEBUG
@@ -1153,15 +1163,19 @@ auto CSnapWindowManager::InitMovingSnap(const SnapWndMsg& msg) -> SnapTargetType
 	helper.m_pManager = this;
 	helper.m_pCurWnd = msg.pHelper->GetWnd();
 
-	helper.InitChildWndInfosForSnap();
+	bool bCheckAdjacentState = ShouldCheckAdjacentStateForSnapping();
+	helper.InitChildWndInfosForSnap(bCheckAdjacentState);
+
 	SnapTargetType targetType = (SnapTargetType)((DWORD)SnapTargetType::Owner|(DWORD)SnapTargetType::Slot);
-	bool bCheckAdjacentChild = helper.m_nStickToOwnerCount > 0;
-	if (bCheckAdjacentChild)
+	bool bAllowChild = !bCheckAdjacentState || helper.m_nStickToOwnerCount > 0;
+	if (bAllowChild)
 		targetType = (SnapTargetType)((DWORD)targetType | (DWORD)SnapTargetType::Child);
 
-	if (helper.m_vChildRects.size() >= 2 && bCheckAdjacentChild 
+	if (bCheckAdjacentState && helper.m_nStickToOwnerCount > 0 && helper.m_vChildRects.size() >= 2
 		&& helper.m_nStickToOwnerCount < helper.m_vChildRects.size())
 	{
+		// There are some child windows that are not adjacent to owner
+		// so we need to check if they are adjacent to those that do
 		helper.CheckSnapableWindows();
 	}
 
@@ -1286,8 +1300,12 @@ auto CSnapWindowManager::GetSnapChildGridInfo(CPoint pt) const -> SnapGridInfo
 		auto& wnd = m_vChildRects[ii];
 		if (PtInRect(&wnd.rect, pt))
 		{
-			if (wnd.bAdjacentToOwner || wnd.bAdjacentToSibling)
+			bool bSnap = !ShouldCheckAdjacentStateForSnapping() || (wnd.bAdjacentToOwner || wnd.bAdjacentToSibling);
+			if (bSnap)
 			{
+				// m_vChildRects is sorted by Z-order with the top most first.
+				// Go back to upper windows to see if it's covered by any other,
+				// and if it does then we don't snap
 				bool bOverlapped = false;
 				for (int jj = ii-1; jj >= 0; --jj)
 				{
