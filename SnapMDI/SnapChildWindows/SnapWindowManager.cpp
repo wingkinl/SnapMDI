@@ -750,7 +750,7 @@ void CSnapWindowManager::SnapWindowsToGridResult(const SnapWindowGridPos& grids)
 	{
 		CRect rect = wnd.rect;
 		m_pWndOwner->ScreenToClient(&rect);
-		::SetWindowPos(wnd.hWnd, nullptr, rect.left, rect.top, rect.Width(), rect.Height(), wnd.flags);
+		::SetWindowPos(wnd.hWnd, HWND_TOP, rect.left, rect.top, rect.Width(), rect.Height(), wnd.flags);
 	}
 }
 
@@ -758,13 +758,14 @@ void CSnapWindowManager::GetSnapWindowGridPosResult(SnapWindowGridPos& grids) co
 {
 	CWnd* pWnd = m_pCurSnapWnd->GetWnd();
 	ASSERT(pWnd->GetParent() == m_pWndOwner);
+	// Add the additional window first so that SnapWindowsToGridResult set the current window
+	// to the top z-order (since it's the last one)
+	GetAdditionalSnapWindowGridPosResult(grids);
 
 	WindowPos wnd = {0};
 	wnd.hWnd = pWnd->GetSafeHwnd();
 	wnd.rect = m_curGrid.rect;
 	grids.wnds.emplace_back(wnd);
-
-	GetAdditionalSnapWindowGridPosResult(grids);
 }
 
 void CSnapWindowManager::GetAdditionalSnapWindowGridPosResult(SnapWindowGridPos& grids) const
@@ -774,7 +775,7 @@ void CSnapWindowManager::GetAdditionalSnapWindowGridPosResult(SnapWindowGridPos&
 		ASSERT(!m_vChildRects.empty());
 		WindowPos wnd = { 0 };
 		wnd.hWnd = m_curGrid.childInfo.hWndChild;
-		wnd.flags = SWP_NOZORDER | SWP_NOACTIVATE;
+		wnd.flags = SWP_NOACTIVATE;
 		if (IsFeatureSwitchEnabled(FeatureTypeSwapWindow))
 		{
 			wnd.rect = m_rcCurSnapWndStart;
