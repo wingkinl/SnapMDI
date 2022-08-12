@@ -67,10 +67,13 @@ void CSnapMDIView::OnDraw(CDC* pDC)
 	else
 	{
 		auto oldROP2 = pDC->SetROP2(R2_NOTXORPEN);
+		CPen pen(PS_SOLID, 20, RGB(255,0,0));
+		auto pOldPen = pDC->SelectObject(&pen);
 		pDC->MoveTo(rect.TopLeft());
 		pDC->LineTo(rect.BottomRight());
 		pDC->MoveTo(rect.right, rect.top);
 		pDC->LineTo(rect.left, rect.bottom);
+		pDC->SelectObject(pOldPen);
 		pDC->SetROP2(oldROP2);
 	}
 }

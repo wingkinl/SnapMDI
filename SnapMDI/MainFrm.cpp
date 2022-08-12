@@ -230,9 +230,28 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	}
 	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
 
+	// Detect color depth. 256 color toolbars can be used in the
+	// high or true color modes only (bits per pixel is > 8):
+	CClientDC dc(this);
+	BOOL bIsHighColor = dc.GetDeviceCaps(BITSPIXEL) > 8;
+
+	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP
+		| CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) ||
+		!m_wndToolBar.LoadToolBar(IDR_MAINFRAME))
+	{
+		TRACE0("Failed to create toolbar\n");
+		return -1;      // fail to create
+	}
+
+	m_wndToolBar.SetWindowText(_T("Standard"));
+	//m_wndToolBar.EnableDocking(CBRS_ALIGN_ANY);
+
 	//m_wndMenuBar.EnableDocking(CBRS_ALIGN_ANY);
+
+
 	EnableDocking(CBRS_ALIGN_ANY);
 	DockPane(&m_wndMenuBar);
+	DockPane(&m_wndToolBar);
 
 	theApp.m_snapWndManager.InitSnap(&m_wndClientArea);
 

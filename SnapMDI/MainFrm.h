@@ -61,7 +61,7 @@ public:
 protected:  // control bar embedded members
 	CMFCMenuBar		m_wndMenuBar;
 	CMFCStatusBar	m_wndStatusBar;
-
+	CMFCToolBar		m_wndToolBar;
 // Generated message map functions
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);

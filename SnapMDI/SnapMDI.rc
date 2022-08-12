@@ -93,11 +93,9 @@ BEGIN
     BUTTON      ID_FILE_OPEN
     BUTTON      ID_FILE_SAVE
     SEPARATOR
-    BUTTON      ID_EDIT_CUT
-    BUTTON      ID_EDIT_COPY
-    BUTTON      ID_EDIT_PASTE
+    BUTTON      ID_VIEW_ENABLEMDITABS
     SEPARATOR
-    BUTTON      ID_FILE_PRINT
+    BUTTON      ID_TEST_PROP
     BUTTON      ID_APP_ABOUT
 END
 
@@ -392,6 +390,12 @@ BEGIN
     AFX_IDS_SCRESTORE       "Restore the window to normal size"
     AFX_IDS_SCTASKLIST      "Activate Task List"
     AFX_IDS_MDICHILD        "Activate this window"
+END
+
+STRINGTABLE
+BEGIN
+    ID_TEST_PROP            "Testing Property"
+    ID_VIEW_ENABLEMDITABS   "Enable MDI Tabs"
 END
 
 #endif    // English (United States) resources
