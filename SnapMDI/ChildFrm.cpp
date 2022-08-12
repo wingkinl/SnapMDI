@@ -14,9 +14,9 @@
 
 // CChildFrame
 
-IMPLEMENT_DYNCREATE(CChildFrame, CMDIChildWnd)
+IMPLEMENT_DYNCREATE(CChildFrame, CChildFrameBase)
 
-BEGIN_MESSAGE_MAP(CChildFrame, CMDIChildWnd)
+BEGIN_MESSAGE_MAP(CChildFrame, CChildFrameBase)
 END_MESSAGE_MAP()
 
 // CChildFrame construction/destruction
@@ -34,7 +34,7 @@ CChildFrame::~CChildFrame()
 BOOL CChildFrame::PreCreateWindow(CREATESTRUCT& cs)
 {
 	// TODO: Modify the Window class or styles here by modifying the CREATESTRUCT cs
-	if( !CMDIChildWnd::PreCreateWindow(cs) )
+	if (!CChildFrameBase::PreCreateWindow(cs))
 		return FALSE;
 
 	return TRUE;
@@ -45,12 +45,12 @@ BOOL CChildFrame::PreCreateWindow(CREATESTRUCT& cs)
 #ifdef _DEBUG
 void CChildFrame::AssertValid() const
 {
-	CMDIChildWnd::AssertValid();
+	CChildFrameBase::AssertValid();
 }
 
 void CChildFrame::Dump(CDumpContext& dc) const
 {
-	CMDIChildWnd::Dump(dc);
+	CChildFrameBase::Dump(dc);
 }
 #endif //_DEBUG
 

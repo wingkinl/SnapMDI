@@ -187,6 +187,8 @@ IMPLEMENT_DYNAMIC(CMainFrame, CMainFrameBase)
 BEGIN_MESSAGE_MAP(CMainFrame, CMainFrameBase)
 	ON_WM_CREATE()
 	ON_COMMAND(ID_TEST_FLOAT, OnTestFloat)
+	ON_UPDATE_COMMAND_UI(ID_VIEW_ENABLEMDITABS, OnUpdateEnableMDITabs)
+	ON_COMMAND(ID_VIEW_ENABLEMDITABS, OnEnableMDITabs)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -275,4 +277,43 @@ void CMainFrame::OnTestFloat()
 	}
 }
 
+
+void CMainFrame::OnUpdateEnableMDITabs(CCmdUI* pCmdUI)
+{
+	pCmdUI->SetCheck(AreMDITabs());
+}
+
+void CMainFrame::OnEnableMDITabs()
+{
+	if (AreMDITabs())
+	{
+		EnableMDITabs(FALSE);
+		auto hwndActive = (HWND)m_wndClientArea.SendMessage(WM_MDIGETACTIVE);
+		m_wndClientArea.SendMessage(WM_MDICASCADE);
+		::BringWindowToTop(hwndActive);
+	}
+	else
+	{
+		auto hwndActive = (HWND)m_wndClientArea.SendMessage(WM_MDIGETACTIVE);
+		m_wndClientArea.PostMessage(WM_MDIMAXIMIZE, LPARAM(hwndActive), 0L);
+		::BringWindowToTop(hwndActive);
+
+		BOOL m_bMDITabsIcons = TRUE;
+		auto nTabsStyle = CMFCTabCtrl::STYLE_3D_SCROLLED;
+		EnableMDITabs(TRUE, m_bMDITabsIcons, CMFCTabCtrl::LOCATION_TOP, TRUE, nTabsStyle);
+
+		BOOL bTabsAutoColor = FALSE;
+		GetMDITabs().EnableAutoColor(bTabsAutoColor);
+		BOOL bMDITabsDocMenu = TRUE;
+		GetMDITabs().EnableTabDocumentsMenu(bMDITabsDocMenu);
+		BOOL bDragMDITabs = TRUE;
+		GetMDITabs().EnableTabSwap(bDragMDITabs);
+		int nMDITabsBorderSize = 1;
+		GetMDITabs().SetTabBorderSize(nMDITabsBorderSize);
+		BOOL bFlatFrame = TRUE;
+		GetMDITabs().SetFlatFrame(bFlatFrame);
+		BOOL bActiveTabCloseButton = TRUE;
+		GetMDITabs().EnableActiveTabCloseButton(bActiveTabCloseButton);
+	}
+}
 

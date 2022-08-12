@@ -5,7 +5,9 @@
 #pragma once
 #include "SnapChildWindows/SnapWindowManager.h"
 
-class CChildFrame : public CMDIChildWnd
+using CChildFrameBase = CMDIChildWndEx;
+
+class CChildFrame : public CChildFrameBase
 {
 	DECLARE_DYNCREATE(CChildFrame)
 public:

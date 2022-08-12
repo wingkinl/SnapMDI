@@ -79,6 +79,9 @@ BOOL CSnapMDIApp::InitInstance()
 	LoadStdProfileSettings(4);  // Load standard INI file options (including MRU)
 
 
+	InitContextMenuManager();
+
+
 	// Register the application's document templates.  Document templates
 	//  serve as the connection between documents, frame windows and views
 	CMultiDocTemplate* pDocTemplate;

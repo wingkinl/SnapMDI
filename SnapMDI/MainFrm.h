@@ -66,6 +66,8 @@ protected:  // control bar embedded members
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnTestFloat();
+	afx_msg void OnUpdateEnableMDITabs(CCmdUI* pCmdUI);
+	afx_msg void OnEnableMDITabs();
 	DECLARE_MESSAGE_MAP()
 
 };
