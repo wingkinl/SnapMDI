@@ -3,7 +3,12 @@
 //
 
 #pragma once
+
 #include "SnapChildWindows/SnapWindowManager.h"
+
+#include "FloatMDIChild/FloatMDIChildHelper.h"
+using namespace FloatMDIChild;
+
 
 using CChildFrameBase = CMDIChildWndEx;
 
@@ -33,13 +38,13 @@ public:
 #endif
 
 protected:
-	CSnapWindowHelper	m_snapHelper;
+	CSnapWindowHelper		m_snapHelper;
+	CFloatMDIChildHelper	m_floatHelper;
 
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
 // Generated message map functions
 protected:
-	
 
 	DECLARE_MESSAGE_MAP()
 };

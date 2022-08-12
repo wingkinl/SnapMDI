@@ -72,6 +72,9 @@
     <ClInclude Include="SnapChildWindows\SnapAssistWnd.h">
       <Filter>SnapChildWindows</Filter>
     </ClInclude>
+    <ClInclude Include="FloatMDIChild\FloatMDIChildHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SnapMDI.cpp">
@@ -115,6 +118,9 @@
     </ClCompile>
     <ClCompile Include="SnapChildWindows\SnapAssistWnd.cpp">
       <Filter>SnapChildWindows</Filter>
+    </ClCompile>
+    <ClCompile Include="FloatMDIChild\FloatMDIChildHelper.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

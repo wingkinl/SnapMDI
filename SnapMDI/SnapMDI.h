@@ -12,6 +12,9 @@
 
 using namespace SnapChildWindows;
 
+#include "FloatMDIChild/FloatMDIChildHelper.h"
+using namespace FloatMDIChild;
+
 // CSnapMDIApp:
 // See SnapMDI.cpp for the implementation of this class
 //
@@ -22,7 +25,8 @@ public:
 	CSnapMDIApp() noexcept;
 
 
-	CSnapWindowManager m_snapWndManager;
+	CSnapWindowManager		m_snapWndManager;
+	CFloatMDIChildManager	m_floatManager;
 
 // Overrides
 public:

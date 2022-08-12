@@ -24,6 +24,8 @@ END_MESSAGE_MAP()
 CChildFrame::CChildFrame() noexcept
 {
 	m_snapHelper.InitSnap(&theApp.m_snapWndManager, this);
+	
+	m_floatHelper.InitFloat(&theApp.m_floatManager, this);
 }
 
 CChildFrame::~CChildFrame()
@@ -36,7 +38,6 @@ BOOL CChildFrame::PreCreateWindow(CREATESTRUCT& cs)
 	// TODO: Modify the Window class or styles here by modifying the CREATESTRUCT cs
 	if (!CChildFrameBase::PreCreateWindow(cs))
 		return FALSE;
-
 	return TRUE;
 }
 
@@ -59,9 +60,16 @@ void CChildFrame::Dump(CDumpContext& dc) const
 
 LRESULT CChildFrame::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-	SnapWndMsg msg = {&m_snapHelper, message, wParam, lParam};
-	if (m_snapHelper.PreWndMsg(msg))
-		return msg.result;
+	{
+		SnapWndMsg msg = { &m_snapHelper, message, wParam, lParam };
+		if (m_snapHelper.PreWndMsg(msg))
+			return msg.result;
+	}
+	{
+		FloatMDIChildMsg msg = {&m_floatHelper, message, wParam, lParam};
+		if (m_floatHelper.PreWndMsg(msg))
+			return msg.result;
+	}
 	return __super::WindowProc(message, wParam, lParam);
 }
 

@@ -254,6 +254,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	DockPane(&m_wndToolBar);
 
 	theApp.m_snapWndManager.InitSnap(&m_wndClientArea);
+	theApp.m_floatManager.InitFloat(this);
 
 	return 0;
 }
